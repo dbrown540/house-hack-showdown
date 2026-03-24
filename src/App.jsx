@@ -25,9 +25,9 @@ export default function App() {
   const [investRet, setInvestRet] = useState(10);
   const [inflationRate, setInflationRate] = useState(3.0);
   const [years, setYears] = useState(10);
-  const [maintVacancyPct, setMaintVacancyPct] = useState(8);
-  const [sellingCostPct, setSellingCostPct] = useState(7);
-  const [emergencyPct, setEmergencyPct] = useState(0);
+  const [maintVacancyPct, setMaintVacancyPct] = useState(5);
+  const [sellingCostPct, setSellingCostPct] = useState(5);
+  const [emergencyPct, setEmergencyPct] = useState(1);
 
   // ── A ──
   const [pA, setPa] = useState(300000);
