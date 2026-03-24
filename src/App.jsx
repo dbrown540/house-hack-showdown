@@ -27,6 +27,7 @@ export default function App() {
   const [years, setYears] = useState(10);
   const [maintVacancyPct, setMaintVacancyPct] = useState(8);
   const [sellingCostPct, setSellingCostPct] = useState(7);
+  const [emergencyPct, setEmergencyPct] = useState(0);
 
   // ── A ──
   const [pA, setPa] = useState(300000);
@@ -61,8 +62,9 @@ export default function App() {
     const totalPITI = monthlyPI + monthlyTax + monthlyIns;
 
     const buyClosingCosts = Math.round(price * (buyClosingCostPct / 100));
+    const emergencyFund = Math.round(price * emergencyPct / 100);
     const cashToClose = down + repairs + buyClosingCosts;
-    const leftoverCapital = startingCapital - cashToClose;
+    const leftoverCapital = startingCapital - cashToClose - emergencyFund;
 
     const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
     const netHousing = totalPITI - effectiveRentYear1 + utilities;
@@ -101,7 +103,7 @@ export default function App() {
     const totalWealth = portfolioValue + netEquity;
 
     return {
-      down, loan, buyClosingCosts, totalPITI: Math.round(totalPITI), cashToClose,
+      down, loan, buyClosingCosts, emergencyFund, totalPITI: Math.round(totalPITI), cashToClose,
       leftoverCapital: Math.round(leftoverCapital),
       effectiveRentYear1: Math.round(effectiveRentYear1),
       netHousing: Math.round(netHousing), totalExpenses: Math.round(totalExpenses),
@@ -153,7 +155,7 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, ins, investRet, inflationRate, years, maintVacancyPct, sellingCostPct];
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, ins, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct];
   const a = useMemo(() => calcBuy(pA, rA, repA, appA, rgA), [pA, rA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcBuy(pB, rB, repB, appB, rgB), [pB, rB, repB, appB, rgB, ...deps]);
   const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
@@ -210,6 +212,7 @@ export default function App() {
             <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
             <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
+            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
@@ -309,6 +312,7 @@ export default function App() {
           <Row3 label="UPFRONT CAPITAL ALLOCATION" section />
           <Row3 label="Cash to Close" vals={[a.cashToClose, b.cashToClose, 0]} winIdx={wLow(a.cashToClose, b.cashToClose, 0)} />
           <Row3 label="Buy Closing Costs" vals={[a.buyClosingCosts, b.buyClosingCosts, 0]} winIdx={wLow(a.buyClosingCosts, b.buyClosingCosts, 0)} />
+          <Row3 label="Emergency Fund (set aside)" vals={[a.emergencyFund, b.emergencyFund, 0]} winIdx={wLow(a.emergencyFund, b.emergencyFund, 0)} />
           <Row3 label="Leftover Capital → Invested Day 1" vals={[a.leftoverCapital, b.leftoverCapital, startingCapital]} winIdx={wHigh(a.leftoverCapital, b.leftoverCapital, startingCapital)} highlight />
 
           <Row3 label="MONTHLY PICTURE (YEAR 1)" section />
