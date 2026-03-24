@@ -47,6 +47,10 @@ export default function App() {
   const [appB, setAppB] = useState(3.0);
   const [rgB, setRgB] = useState(2);
 
+  // ── PHASE 2 PERSONAL HOUSING ──
+  const [phase2Rent, setPhase2Rent] = useState(1000);
+  const [phase2RentGrowth, setPhase2RentGrowth] = useState(3);
+
   // ── C: NEVER BUY ──
   const [monthlyRent, setMonthlyRent] = useState(1000);
   const [rentInflation, setRentInflation] = useState(3);
@@ -94,7 +98,7 @@ export default function App() {
       const curIns = monthlyIns * inflFactor;
       const curPITI = monthlyPI + curTax + curIns;
       // Phase 2: you pay rent elsewhere + property expenses, but collect full rent
-      const curPersonalRent = inHackPhase ? 0 : monthlyRent * Math.pow(1 + rentInflation / 100, y - 1);
+      const curPersonalRent = inHackPhase ? 0 : phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - 1);
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
       const curNet = curPITI - curEffRent + ownerUtils + curPersonalRent;
       const curSurplus = curTakeHome - (curNet + curLiving);
@@ -167,7 +171,7 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, monthlyRent, rentInflation];
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, monthlyRent, rentInflation];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcBuy(pB, rB, fullRentB, repB, appB, rgB), [pB, rB, fullRentB, repB, appB, rgB, ...deps]);
   const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
@@ -228,6 +232,8 @@ export default function App() {
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
+            <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" />
+            <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
@@ -345,7 +351,7 @@ export default function App() {
           const t = {
             tossup: 3 * hackW + 10 * invW,
             leaning: 10 * hackW + 20 * invW,
-            clear: 20 * hackW + 35 * invW,
+            clear: 20 * hackW + 25 * invW,
           };
           const verdictLabel = marginPct < t.tossup ? "Toss-Up"
             : marginPct < t.leaning ? "Leaning"
