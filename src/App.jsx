@@ -22,7 +22,7 @@ export default function App() {
   const [rate, setRate] = useState(5.875);
   const [taxPct, setTaxPct] = useState(1.21);
   const [ins, setIns] = useState(1500);
-  const [investRet, setInvestRet] = useState(7);
+  const [investRet, setInvestRet] = useState(10);
   const [inflationRate, setInflationRate] = useState(3.0);
   const [years, setYears] = useState(10);
   const [maintVacancyPct, setMaintVacancyPct] = useState(8);
