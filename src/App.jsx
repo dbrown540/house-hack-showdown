@@ -28,6 +28,7 @@ export default function App() {
   const [maintVacancyPct, setMaintVacancyPct] = useState(5);
   const [sellingCostPct, setSellingCostPct] = useState(5);
   const [emergencyPct, setEmergencyPct] = useState(1);
+  const [isHouseHack, setIsHouseHack] = useState(true);
 
   // ── A ──
   const [pA, setPa] = useState(300000);
@@ -169,6 +170,8 @@ export default function App() {
   const winColor = [COLORS.A, COLORS.B, COLORS.C][winIdx];
   const secondW = [...allW].sort((x, y) => y - x)[1];
   const margin = maxW - secondW;
+  const marginPct = secondW > 0 ? (margin / secondW * 100) : 0;
+  const marginPerYear = margin / years;
 
   const wHigh = (...vals) => { const m = Math.max(...vals); return vals.indexOf(m); };
   
@@ -297,6 +300,75 @@ export default function App() {
             ))}
           </div>
         </div>
+
+        {/* WORTH IT? */}
+        {(() => {
+          const t = isHouseHack
+            ? { tossup: 3, leaning: 10, clear: 20 }
+            : { tossup: 10, leaning: 20, clear: 35 };
+          const verdictLabel = marginPct < t.tossup ? "Toss-Up"
+            : marginPct < t.leaning ? "Leaning"
+            : marginPct < t.clear ? "Clear Win" : "No-Brainer";
+          const verdictColor = marginPct < t.tossup ? "#ef4444"
+            : marginPct < t.leaning ? "#fbbf24" : "#22c55e";
+          const verdictDesc = marginPct < t.tossup
+            ? `< ${t.tossup}% edge — too close to call, pick what fits your life`
+            : marginPct < t.leaning
+            ? `${t.tossup}–${t.leaning}% edge — winner has a real advantage, but it's not overwhelming`
+            : marginPct < t.clear
+            ? `${t.leaning}–${t.clear}% edge — strong case for the winner`
+            : `> ${t.clear}% edge — the math is loud and clear`;
+          const cautionThreshold = t.leaning;
+          return (
+            <div style={{ marginBottom: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 10, padding: "14px 18px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#fbbf24", fontFamily: "var(--mono)" }}>IS THE JUICE WORTH THE SQUEEZE?</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 9, color: !isHouseHack ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)", fontFamily: "var(--mono)" }}>RENTAL</span>
+                  <div onClick={() => setIsHouseHack(!isHouseHack)} style={{
+                    width: 36, height: 18, borderRadius: 9, cursor: "pointer",
+                    background: isHouseHack ? "#fbbf24" : "rgba(255,255,255,0.15)",
+                    position: "relative", transition: "background 0.2s"
+                  }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                      position: "absolute", top: 2, left: isHouseHack ? 20 : 2, transition: "left 0.2s"
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 9, color: isHouseHack ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)", fontFamily: "var(--mono)" }}>HOUSE-HACK</span>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 10 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", marginBottom: 4 }}>EDGE OVER RUNNER-UP</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: winColor }}>{marginPct.toFixed(1)}%</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>{fmt(margin)} total</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", marginBottom: 4 }}>ADVANTAGE PER YEAR</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: winColor }}>{fmt(Math.round(marginPerYear))}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>{fmt(Math.round(marginPerYear / 12))}/mo</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", marginBottom: 4 }}>VERDICT</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: verdictColor }}>{verdictLabel}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>{verdictDesc}</div>
+                </div>
+              </div>
+              {winIdx !== 2 && marginPct < cautionThreshold && (
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+                  At {fmt(Math.round(marginPerYear))}/yr advantage, ask yourself: is the {isHouseHack ? "landlord work, shared living, " : "landlord work, property management, "}and illiquidity worth it vs. just investing in index funds?
+                </div>
+              )}
+              {winIdx === 2 && marginPct < cautionThreshold && (
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+                  The S&P barely edges out buying. A slightly better deal, lower rate, or higher rent could flip this — {isHouseHack ? "the house-hack" : "the rental property"} is still in play.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* TABLE */}
         <div style={{ background: "rgba(255,255,255,0.012)", border: "1px solid rgba(255,255,255,0.04)",
