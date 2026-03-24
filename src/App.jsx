@@ -28,11 +28,13 @@ export default function App() {
   const [maintVacancyPct, setMaintVacancyPct] = useState(5);
   const [sellingCostPct, setSellingCostPct] = useState(5);
   const [emergencyPct, setEmergencyPct] = useState(1);
+  const [hackYears, setHackYears] = useState(2);
   const [isHouseHack, setIsHouseHack] = useState(true);
 
   // ── A ──
   const [pA, setPa] = useState(300000);
   const [rA, setRa] = useState(1000);
+  const [fullRentA, setFullRentA] = useState(2400);
   const [repA, setRepA] = useState(0);
   const [appA, setAppA] = useState(2.5);
   const [rgA, setRgA] = useState(2);
@@ -40,6 +42,7 @@ export default function App() {
   // ── B ──
   const [pB, setPb] = useState(375000);
   const [rB, setRb] = useState(1200);
+  const [fullRentB, setFullRentB] = useState(2800);
   const [repB, setRepB] = useState(0);
   const [appB, setAppB] = useState(3.0);
   const [rgB, setRgB] = useState(2);
@@ -54,7 +57,7 @@ export default function App() {
   const r = investRet / 100;
 
   // ── HOUSE-HACK CALC ──
-  const calcBuy = (price, rent, repairs, appRate, rentGrowth) => {
+  const calcBuy = (price, rent, fullRent, repairs, appRate, rentGrowth) => {
     const down = Math.round(price * downPct / 100);
     const loan = price - down;
     const monthlyPI = pmt(rate / 100, 30, loan);
@@ -67,6 +70,7 @@ export default function App() {
     const cashToClose = down + repairs + buyClosingCosts;
     const leftoverCapital = startingCapital - cashToClose - emergencyFund;
 
+    // Phase 1 (house-hack) year 1 snapshot
     const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
     const netHousing = totalPITI - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
@@ -77,8 +81,10 @@ export default function App() {
     let totalRentCollected = 0;
 
     for (let y = 1; y <= years; y++) {
+      const inHackPhase = y <= hackYears;
       const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
-      const curRent = rent * Math.pow(1 + rentGrowth / 100, y - 1);
+      const baseRent = inHackPhase ? rent : fullRent;
+      const curRent = baseRent * Math.pow(1 + rentGrowth / 100, y - 1);
       const curEffRent = curRent * (1 - maintVacancyPct / 100);
       totalRentCollected += curEffRent * 12;
       const curTakeHome = monthlyIncome * Math.pow(1.03, y - 1);
@@ -87,7 +93,9 @@ export default function App() {
       const curTax = monthlyTax * inflFactor;
       const curIns = monthlyIns * inflFactor;
       const curPITI = monthlyPI + curTax + curIns;
-      const curNet = curPITI - curEffRent + curUtils;
+      // Phase 2: you pay rent elsewhere + property expenses, but collect full rent
+      const curPersonalRent = inHackPhase ? 0 : monthlyRent * Math.pow(1 + rentInflation / 100, y - 1);
+      const curNet = curPITI - curEffRent + curUtils + curPersonalRent;
       const curSurplus = curTakeHome - (curNet + curLiving);
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
     }
@@ -156,9 +164,9 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct];
-  const a = useMemo(() => calcBuy(pA, rA, repA, appA, rgA), [pA, rA, repA, appA, rgA, ...deps]);
-  const b = useMemo(() => calcBuy(pB, rB, repB, appB, rgB), [pB, rB, repB, appB, rgB, ...deps]);
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, monthlyRent, rentInflation];
+  const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
+  const b = useMemo(() => calcBuy(pB, rB, fullRentB, repB, appB, rgB), [pB, rB, fullRentB, repB, appB, rgB, ...deps]);
   const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
 
   // ── WINNER ──
@@ -216,6 +224,7 @@ export default function App() {
             <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
+            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={1} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
@@ -236,6 +245,7 @@ export default function App() {
             </div>
             <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} />
             <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} />
+            <Slider label="Full Rent / Mo (after move-out)" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} />
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} />
@@ -249,6 +259,7 @@ export default function App() {
             </div>
             <Slider label="Home Price" value={pB} onChange={setPb} min={100000} max={750000} step={5000} color={COLORS.B} />
             <Slider label="Rental Income / Mo" value={rB} onChange={setRb} min={0} max={4000} step={50} color={COLORS.B} />
+            <Slider label="Full Rent / Mo (after move-out)" value={fullRentB} onChange={setFullRentB} min={0} max={5000} step={50} color={COLORS.B} />
             <Slider label="Upfront Repairs" value={repB} onChange={setRepB} min={0} max={50000} step={1000} color={COLORS.B} />
             <Slider label="Appreciation" value={appB} onChange={setAppB} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.B} />
             <Slider label="Rent Growth" value={rgB} onChange={setRgB} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.B} />
