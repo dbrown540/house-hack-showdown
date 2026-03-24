@@ -21,7 +21,7 @@ export default function App() {
   const [buyClosingCostPct, setBuyClosingCostPct] = useState(2.5);
   const [rate, setRate] = useState(5.875);
   const [taxPct, setTaxPct] = useState(1.21);
-  const [ins, setIns] = useState(1500);
+  const [insPct, setInsPct] = useState(0.5);
   const [investRet, setInvestRet] = useState(10);
   const [inflationRate, setInflationRate] = useState(3.0);
   const [years, setYears] = useState(10);
@@ -59,7 +59,7 @@ export default function App() {
     const loan = price - down;
     const monthlyPI = pmt(rate / 100, 30, loan);
     const monthlyTax = Math.round(price * taxPct / 100 / 12);
-    const monthlyIns = Math.round(ins / 12);
+    const monthlyIns = Math.round(price * insPct / 100 / 12);
     const totalPITI = monthlyPI + monthlyTax + monthlyIns;
 
     const buyClosingCosts = Math.round(price * (buyClosingCostPct / 100));
@@ -156,7 +156,7 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, ins, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct];
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct];
   const a = useMemo(() => calcBuy(pA, rA, repA, appA, rgA), [pA, rA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcBuy(pB, rB, repB, appB, rgB), [pB, rB, repB, appB, rgB, ...deps]);
   const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
@@ -207,10 +207,10 @@ export default function App() {
           borderRadius: 10, padding: "14px 18px" }}>
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", marginBottom: 10 }}>SHARED ASSUMPTIONS</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-            <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={10000} max={150000} step={1000} color="#fff" />
-            <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={5000} step={50} color="#fff" />
+            <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={5000} max={300000} step={1000} color="#fff" />
+            <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={8000} step={50} color="#fff" />
             <Slider label="Groceries + Gas / Wk" value={weeklyCost} onChange={setWeeklyCost} min={50} max={200} step={5} color="#fff" />
-            <Slider label="Utilities / Mo (owner)" value={utilities} onChange={setUtilities} min={200} max={800} step={25} color="#fff" />
+            <Slider label="Utilities / Mo (owner)" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
             <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
             <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
@@ -219,9 +219,9 @@ export default function App() {
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
-            <Slider label="Home Insurance / Yr" value={ins} onChange={setIns} min={800} max={3000} step={100} color="#fff" />
+            <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
             <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={30} step={1} prefix="" suffix=" yrs" color="#fff" />
+            <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" />
           </div>
         </div>
 
@@ -234,8 +234,8 @@ export default function App() {
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.A }} />
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.A, fontFamily: "var(--mono)" }}>A: BUY CHEAPER</span>
             </div>
-            <Slider label="Home Price" value={pA} onChange={setPa} min={200000} max={500000} step={5000} color={COLORS.A} />
-            <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={3000} step={50} color={COLORS.A} />
+            <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} />
+            <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} />
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} />
@@ -247,8 +247,8 @@ export default function App() {
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.B }} />
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.B, fontFamily: "var(--mono)" }}>B: BUY BETTER</span>
             </div>
-            <Slider label="Home Price" value={pB} onChange={setPb} min={200000} max={500000} step={5000} color={COLORS.B} />
-            <Slider label="Rental Income / Mo" value={rB} onChange={setRb} min={0} max={3000} step={50} color={COLORS.B} />
+            <Slider label="Home Price" value={pB} onChange={setPb} min={100000} max={750000} step={5000} color={COLORS.B} />
+            <Slider label="Rental Income / Mo" value={rB} onChange={setRb} min={0} max={4000} step={50} color={COLORS.B} />
             <Slider label="Upfront Repairs" value={repB} onChange={setRepB} min={0} max={50000} step={1000} color={COLORS.B} />
             <Slider label="Appreciation" value={appB} onChange={setAppB} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.B} />
             <Slider label="Rent Growth" value={rgB} onChange={setRgB} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.B} />
