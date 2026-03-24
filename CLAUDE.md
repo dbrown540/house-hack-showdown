@@ -24,9 +24,13 @@ Pushes to `main` auto-deploy to GitHub Pages via `.github/workflows/deploy.yml` 
 
 All app logic lives in a single component (`src/App.jsx`):
 - **28 `useState` hooks** manage all inputs (shared assumptions + per-option sliders)
-- **`calcBuy(price, rent, repairs, appRate, rentGrowth)`** — year-by-year financial model for buy scenarios (mortgage PITI, inflation, vacancy, appreciation, selling costs, investment compounding)
+- **`calcBuy(price, rent, fullRent, repairs, appRate, rentGrowth)`** — year-by-year financial model for buy scenarios with two phases:
+  - **Phase 1 (house-hack)**: owner lives in property, collects partial rent; length controlled by `hackYears`
+  - **Phase 2**: owner moves out, collects full rent (`fullRent`), pays personal rent elsewhere (`phase2Rent`)
+  - Models mortgage PITI, inflation, vacancy/maintenance reserves, appreciation, selling costs, and investment compounding on surpluses
 - **`calcNeverBuy()`** — renter + S&P model using closure over shared state
-- **`useMemo`** caches results for Options A, B, C; a winner is determined by comparing total wealth
+- **`useMemo`** caches results for Options A, B, C; a winner is determined by comparing `totalWealth`
+- **`wHigh` / `wLow`** — helpers that return the index (0/1/2) of the best value for a row, used by `Row3` for winner highlighting
 
 Supporting files:
 - `src/utils/math.js` — `pmt()` (mortgage payment), `calcRequiredMonthlyRent()`, `fmt()` (currency formatting — always use this for dollar display)
@@ -39,3 +43,5 @@ Supporting files:
 - Inline CSS-in-JSX styling with CSS variables for typography (`--mono`, `--body`)
 - PascalCase components, camelCase functions/variables
 - `calcBuy`/`calcNeverBuy` are the source of truth for financial modeling — when modifying, ensure Verdict, Insights, and "What Flips" sections stay logically consistent
+- Income growth is hardcoded at 3% annually (`Math.pow(1.03, y-1)`) in both calc functions — not tied to the `inflationRate` slider
+- Both calc functions return the same object shape so `Row3` can display any option uniformly

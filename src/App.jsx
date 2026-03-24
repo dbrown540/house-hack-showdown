@@ -27,6 +27,7 @@ export default function App() {
   const [years, setYears] = useState(10);
   const [maintVacancyPct, setMaintVacancyPct] = useState(5);
   const [sellingCostPct, setSellingCostPct] = useState(5);
+  const [pmiRate, setPmiRate] = useState(0.5);
   const [emergencyPct, setEmergencyPct] = useState(1);
   const [hackYears, setHackYears] = useState(2);
   const [tenantPaysUtils, setTenantPaysUtils] = useState(true);
@@ -55,6 +56,7 @@ export default function App() {
   const [monthlyRent, setMonthlyRent] = useState(1000);
   const [rentInflation, setRentInflation] = useState(3);
   const [renterIns, setRenterIns] = useState(15);
+  const [renterUtils, setRenterUtils] = useState(300);
 
   const livingMonthly = weeklyCost * 52 / 12;
   const monthlyIncome = takeHome * 2;
@@ -76,19 +78,27 @@ export default function App() {
 
     // Phase 1 (house-hack) year 1 snapshot
     const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
-    const netHousing = totalPITI - effectiveRentYear1 + utilities;
+    const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
+    const netHousing = totalPITI + initialPMI - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
     const surplus = monthlyIncome - totalExpenses;
     const housingPctGross = netHousing / monthlyIncome * 100;
 
     let portfolioValue = leftoverCapital > 0 ? leftoverCapital : 0;
     let totalRentCollected = 0;
+    const monthlyR = rate / 100 / 12;
+    let balance = loan;
 
     for (let y = 1; y <= years; y++) {
+      // Pay down mortgage for this year (12 months)
+      for (let m = 0; m < 12; m++) { balance = balance * (1 + monthlyR) - monthlyPI; }
+      balance = Math.max(balance, 0);
+
       const inHackPhase = y <= hackYears;
       const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
       const baseRent = inHackPhase ? rent : fullRent;
-      const curRent = baseRent * Math.pow(1 + rentGrowth / 100, y - 1);
+      const rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1);
+      const curRent = baseRent * Math.pow(1 + rentGrowth / 100, Math.max(0, rentGrowthYears));
       const curEffRent = curRent * (1 - maintVacancyPct / 100);
       totalRentCollected += curEffRent * 12;
       const curTakeHome = monthlyIncome * Math.pow(1.03, y - 1);
@@ -97,18 +107,19 @@ export default function App() {
       const curTax = monthlyTax * inflFactor;
       const curIns = monthlyIns * inflFactor;
       const curPITI = monthlyPI + curTax + curIns;
+
+      // PMI: applies when balance > 80% of current home value
+      const curHomeValue = price * Math.pow(1 + appRate / 100, y);
+      const monthlyPMI = (balance > 0.8 * curHomeValue && downPct < 20) ? (pmiRate / 100) * loan / 12 : 0;
+
       // Phase 2: you pay rent elsewhere + property expenses, but collect full rent
-      const curPersonalRent = inHackPhase ? 0 : phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - 1);
+      const curPersonalRent = inHackPhase ? 0 : phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - hackYears - 1);
+      const curPersonalUtils = inHackPhase ? 0 : curUtils;
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
-      const curNet = curPITI - curEffRent + ownerUtils + curPersonalRent;
+      const curNet = curPITI + monthlyPMI - curEffRent + ownerUtils + curPersonalRent + curPersonalUtils;
       const curSurplus = curTakeHome - (curNet + curLiving);
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
     }
-
-    const monthlyR = rate / 100 / 12;
-    let balance = loan;
-    for (let i = 0; i < years * 12; i++) { balance = balance * (1 + monthlyR) - monthlyPI; }
-    balance = Math.max(balance, 0);
 
     const homeValue = price * Math.pow(1 + appRate / 100, years);
     const grossEquity = homeValue - balance;
@@ -138,7 +149,7 @@ export default function App() {
     let portfolioValue = startingCapital;
     let totalRentPaid = 0;
 
-    const year1Expenses = monthlyRent + renterIns + livingMonthly;
+    const year1Expenses = monthlyRent + renterIns + renterUtils + livingMonthly;
     const surplus0 = monthlyIncome - year1Expenses;
 
     for (let y = 1; y <= years; y++) {
@@ -148,19 +159,20 @@ export default function App() {
       const curTakeHome = monthlyIncome * Math.pow(1.03, y - 1);
       const curLiving = livingMonthly * inflFactor;
       const curRenterIns = renterIns * inflFactor;
-      const curExpenses = curRent + curRenterIns + curLiving;
+      const curRenterUtils = renterUtils * inflFactor;
+      const curExpenses = curRent + curRenterIns + curRenterUtils + curLiving;
       const curSurplus = curTakeHome - curExpenses;
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
     }
 
-    const housingPct = monthlyRent / monthlyIncome * 100;
+    const housingPct = (monthlyRent + renterUtils) / monthlyIncome * 100;
 
     return {
       down: 0, loan: 0, buyClosingCosts: 0, totalPITI: 0, cashToClose: 0,
       leftoverCapital: startingCapital,
       effectiveRentYear1: 0,
-      netHousing: Math.round(monthlyRent + renterIns),
-      totalExpenses: Math.round(monthlyRent + renterIns + livingMonthly),
+      netHousing: Math.round(monthlyRent + renterIns + renterUtils),
+      totalExpenses: Math.round(monthlyRent + renterIns + renterUtils + livingMonthly),
       surplus: Math.round(surplus0), surplusChk: Math.round(surplus0 / 2),
       housingPctGross: housingPct,
       portfolioValue: Math.round(portfolioValue),
@@ -171,10 +183,28 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, monthlyRent, rentInflation];
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, monthlyRent, rentInflation, pmiRate, renterUtils];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcBuy(pB, rB, fullRentB, repB, appB, rgB), [pB, rB, fullRentB, repB, appB, rgB, ...deps]);
-  const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
+  const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
+
+  // ── NEVER-BUY WITH CUSTOM RETURN (for binary search) ──
+  const calcNeverBuyWealth = (customReturn) => {
+    const cr = customReturn / 100;
+    let pv = startingCapital;
+    for (let y = 1; y <= years; y++) {
+      const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
+      const curRent = monthlyRent * Math.pow(1 + rentInflation / 100, y - 1);
+      const curTakeHome = monthlyIncome * Math.pow(1.03, y - 1);
+      const curLiving = livingMonthly * inflFactor;
+      const curRenterIns = renterIns * inflFactor;
+      const curRenterUtils = renterUtils * inflFactor;
+      const curExpenses = curRent + curRenterIns + curRenterUtils + curLiving;
+      const curSurplus = curTakeHome - curExpenses;
+      pv = (pv + curSurplus * 12) * (1 + cr);
+    }
+    return pv;
+  };
 
   // ── WINNER ──
   const allW = [a.totalWealth, b.totalWealth, c.totalWealth];
@@ -187,6 +217,17 @@ export default function App() {
   const margin = maxW - secondW;
   const marginPct = secondW > 0 ? (margin / secondW * 100) : 0;
   const marginPerYear = margin / years;
+
+  // Binary search: what S&P return makes the renter match the winner?
+  const spBreakeven = useMemo(() => {
+    if (winIdx === 2) return investRet;
+    let lo = 0, hi = 50;
+    for (let i = 0; i < 50; i++) {
+      const mid = (lo + hi) / 2;
+      if (calcNeverBuyWealth(mid) < maxW) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }, [winIdx, maxW, ...deps]);
 
   const wHigh = (...vals) => { const m = Math.max(...vals); return vals.indexOf(m); };
   
@@ -225,7 +266,7 @@ export default function App() {
             <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={5000} max={300000} step={1000} color="#fff" />
             <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={8000} step={50} color="#fff" />
             <Slider label="Groceries + Gas / Wk" value={weeklyCost} onChange={setWeeklyCost} min={50} max={200} step={5} color="#fff" />
-            <Slider label="Utilities / Mo (owner)" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
+            <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
             <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
             <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
@@ -238,6 +279,7 @@ export default function App() {
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
             <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
+            <Slider label="PMI Rate (if <20% down)" value={pmiRate} onChange={setPmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
             <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" />
           </div>
@@ -306,6 +348,7 @@ export default function App() {
             <Slider label="Monthly Rent" value={monthlyRent} onChange={setMonthlyRent} min={500} max={2500} step={50} color={COLORS.C} />
             <Slider label="Rent Inflation / Yr" value={rentInflation} onChange={setRentInflation} min={0} max={6} step={0.5} prefix="" suffix="%" color={COLORS.C} />
             <Slider label="Renter's Insurance / Mo" value={renterIns} onChange={setRenterIns} min={10} max={50} step={5} color={COLORS.C} />
+            <Slider label="Utilities / Mo" value={renterUtils} onChange={setRenterUtils} min={0} max={1200} step={25} color={COLORS.C} />
             <div style={{ marginTop: 10, padding: "8px 0", borderTop: `1px solid ${BGS.C}0.1)` }}>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>All {fmt(startingCapital)} invested in S&P on day 1</div>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>No property tax, no maintenance, no selling costs</div>
@@ -488,7 +531,7 @@ export default function App() {
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
             {winIdx !== 2 ? (
               <>
-                The S&P path would need roughly <strong style={{ color: COLORS.C }}>{((maxW - c.totalWealth) / c.portfolioValue * 100 + investRet).toFixed(1)}% annual returns</strong> to
+                The S&P path would need roughly <strong style={{ color: COLORS.C }}>{spBreakeven.toFixed(1)}% annual returns</strong> to
                 match Option {winLabel} at current assumptions. Or rental income would need to drop to <strong style={{ color: COLORS.C }}>{fmt(Math.max(0, Math.round(rA - calcRequiredMonthlyRent(a.totalWealth - c.totalWealth, years, investRet))))}</strong>/mo on
                 Option A for the market to win. The house-hack’s edge is tenants + leverage — erode either and the S&P catches up.
               </>
