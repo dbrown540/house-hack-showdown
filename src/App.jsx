@@ -68,7 +68,7 @@ export default function App() {
     const netHousing = totalPITI - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
     const surplus = monthlyIncome - totalExpenses;
-    const housingPctGross = totalPITI / monthlyIncome * 100;
+    const housingPctGross = netHousing / monthlyIncome * 100;
 
     let portfolioValue = leftoverCapital > 0 ? leftoverCapital : 0;
     let totalRentCollected = 0;
@@ -315,12 +315,12 @@ export default function App() {
           <Row3 label="Mortgage PITI" vals={[a.totalPITI, b.totalPITI, null]} />
           <Row3 label="Rent Paid" vals={[null, null, monthlyRent]} />
           <Row3 label="Effective Rental Income" vals={[a.effectiveRentYear1, b.effectiveRentYear1, null]} winIdx={a.effectiveRentYear1 > b.effectiveRentYear1 ? 0 : 1} />
+          <Row3 label="Mortgage % of Take-Home" vals={[a.housingPctGross, b.housingPctGross, c.housingPctGross]}
+            fmtFn={v => v.toFixed(1) + "%"} winIdx={wLow(a.housingPctGross, b.housingPctGross, c.housingPctGross)} highlight />
           <Row3 label="Net Housing Cost" vals={[a.netHousing, b.netHousing, c.netHousing]} winIdx={wLow(a.netHousing, b.netHousing, c.netHousing)} highlight />
           <Row3 label="Total Monthly Expenses" vals={[a.totalExpenses, b.totalExpenses, c.totalExpenses]} winIdx={wLow(a.totalExpenses, b.totalExpenses, c.totalExpenses)} />
           <Row3 label="Monthly Surplus → Invest" vals={[a.surplus, b.surplus, c.surplus]} winIdx={wHigh(a.surplus, b.surplus, c.surplus)} highlight />
           <Row3 label="Surplus / Check" vals={[a.surplusChk, b.surplusChk, c.surplusChk]} winIdx={wHigh(a.surplusChk, b.surplusChk, c.surplusChk)} />
-          <Row3 label="Housing % (Gross)" vals={[a.housingPctGross, b.housingPctGross, c.housingPctGross]}
-            fmtFn={v => v.toFixed(1) + "%"} winIdx={wLow(a.housingPctGross, b.housingPctGross, c.housingPctGross)} />
 
           <Row3 label={`${years}-YEAR OUTCOME`} section />
           <Row3 label="Home Value" vals={[a.homeValue, b.homeValue, null]} winIdx={a.homeValue > b.homeValue ? 0 : 1} />
