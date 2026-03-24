@@ -18,7 +18,7 @@ export default function App() {
   const [utilities, setUtilities] = useState(500);
   const [startingCapital, setStartingCapital] = useState(50000);
   const [downPct, setDownPct] = useState(3);
-  const [buyClosingCostPct, setBuyClosingCostPct] = useState(2.5);
+  const [buyClosingCostPct, setBuyClosingCostPct] = useState(3);
   const [rate, setRate] = useState(5.875);
   const [taxPct, setTaxPct] = useState(1.21);
   const [insPct, setInsPct] = useState(0.5);
