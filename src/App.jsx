@@ -29,7 +29,7 @@ export default function App() {
   const [sellingCostPct, setSellingCostPct] = useState(5);
   const [emergencyPct, setEmergencyPct] = useState(1);
   const [hackYears, setHackYears] = useState(2);
-  const [isHouseHack, setIsHouseHack] = useState(true);
+  const [tenantPaysUtils, setTenantPaysUtils] = useState(true);
 
   // ── A ──
   const [pA, setPa] = useState(300000);
@@ -95,7 +95,8 @@ export default function App() {
       const curPITI = monthlyPI + curTax + curIns;
       // Phase 2: you pay rent elsewhere + property expenses, but collect full rent
       const curPersonalRent = inHackPhase ? 0 : monthlyRent * Math.pow(1 + rentInflation / 100, y - 1);
-      const curNet = curPITI - curEffRent + curUtils + curPersonalRent;
+      const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
+      const curNet = curPITI - curEffRent + ownerUtils + curPersonalRent;
       const curSurplus = curTakeHome - (curNet + curLiving);
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
     }
@@ -111,9 +112,11 @@ export default function App() {
     const netEquity = grossEquity - sellingCost;
     const totalWealth = portfolioValue + netEquity;
 
+    const underfunded = leftoverCapital < 0;
+
     return {
       down, loan, buyClosingCosts, emergencyFund, totalPITI: Math.round(totalPITI), cashToClose,
-      leftoverCapital: Math.round(leftoverCapital),
+      leftoverCapital: Math.round(leftoverCapital), underfunded,
       effectiveRentYear1: Math.round(effectiveRentYear1),
       netHousing: Math.round(netHousing), totalExpenses: Math.round(totalExpenses),
       surplus: Math.round(surplus), surplusChk: Math.round(surplus / 2),
@@ -164,7 +167,7 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, monthlyRent, rentInflation];
+  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, monthlyRent, rentInflation];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcBuy(pB, rB, fullRentB, repB, appB, rgB), [pB, rB, fullRentB, repB, appB, rgB, ...deps]);
   const c = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, ...deps]);
@@ -224,13 +227,36 @@ export default function App() {
             <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={1} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
+            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
             <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
             <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div onClick={() => setTenantPaysUtils(!tenantPaysUtils)} style={{
+                width: 36, height: 18, borderRadius: 9, cursor: "pointer",
+                background: tenantPaysUtils ? "#22c55e" : "rgba(255,255,255,0.15)",
+                position: "relative", transition: "background 0.2s", flexShrink: 0
+              }}>
+                <div style={{
+                  width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                  position: "absolute", top: 2, left: tenantPaysUtils ? 20 : 2, transition: "left 0.2s"
+                }} />
+              </div>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "var(--mono)" }}>
+                Tenant pays utilities after move-out
+              </span>
+            </div>
+            {(a.underfunded || b.underfunded) && (
+              <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "var(--mono)", display: "flex", alignItems: "center", gap: 4 }}>
+                ⚠ {a.underfunded && b.underfunded ? "Options A & B" : a.underfunded ? "Option A" : "Option B"}: starting capital doesn't cover cash-to-close + emergency fund
+                ({a.underfunded ? `A: ${fmt(a.leftoverCapital)}` : ""}{a.underfunded && b.underfunded ? ", " : ""}{b.underfunded ? `B: ${fmt(b.leftoverCapital)}` : ""} shortfall)
+              </div>
+            )}
           </div>
         </div>
 
@@ -314,9 +340,13 @@ export default function App() {
 
         {/* WORTH IT? */}
         {(() => {
-          const t = isHouseHack
-            ? { tossup: 3, leaning: 10, clear: 20 }
-            : { tossup: 10, leaning: 20, clear: 35 };
+          const hackW = years > 0 ? hackYears / years : 0;
+          const invW = 1 - hackW;
+          const t = {
+            tossup: 3 * hackW + 10 * invW,
+            leaning: 10 * hackW + 20 * invW,
+            clear: 20 * hackW + 35 * invW,
+          };
           const verdictLabel = marginPct < t.tossup ? "Toss-Up"
             : marginPct < t.leaning ? "Leaning"
             : marginPct < t.clear ? "Clear Win" : "No-Brainer";
@@ -335,19 +365,9 @@ export default function App() {
               borderRadius: 10, padding: "14px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#fbbf24", fontFamily: "var(--mono)" }}>IS THE JUICE WORTH THE SQUEEZE?</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 9, color: !isHouseHack ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)", fontFamily: "var(--mono)" }}>RENTAL</span>
-                  <div onClick={() => setIsHouseHack(!isHouseHack)} style={{
-                    width: 36, height: 18, borderRadius: 9, cursor: "pointer",
-                    background: isHouseHack ? "#fbbf24" : "rgba(255,255,255,0.15)",
-                    position: "relative", transition: "background 0.2s"
-                  }}>
-                    <div style={{
-                      width: 14, height: 14, borderRadius: "50%", background: "#fff",
-                      position: "absolute", top: 2, left: isHouseHack ? 20 : 2, transition: "left 0.2s"
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 9, color: isHouseHack ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)", fontFamily: "var(--mono)" }}>HOUSE-HACK</span>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)" }}>
+                  {hackYears >= years ? "HOUSE-HACK" : hackYears === 0 ? "PURE INVESTMENT" : `HYBRID (${hackYears}yr hack / ${years - hackYears}yr rental)`}
+                  {" · "}THRESHOLDS: {t.tossup.toFixed(1)}% / {t.leaning.toFixed(1)}% / {t.clear.toFixed(1)}%
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 10 }}>
@@ -369,12 +389,12 @@ export default function App() {
               </div>
               {winIdx !== 2 && marginPct < cautionThreshold && (
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
-                  At {fmt(Math.round(marginPerYear))}/yr advantage, ask yourself: is the {isHouseHack ? "landlord work, shared living, " : "landlord work, property management, "}and illiquidity worth it vs. just investing in index funds?
+                  At {fmt(Math.round(marginPerYear))}/yr advantage, ask yourself: is the {hackYears >= years ? "landlord work, shared living, " : hackYears === 0 ? "landlord work, property management, " : "landlord work, shared living then property management, "}and illiquidity worth it vs. just investing in index funds?
                 </div>
               )}
               {winIdx === 2 && marginPct < cautionThreshold && (
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
-                  The S&P barely edges out buying. A slightly better deal, lower rate, or higher rent could flip this — {isHouseHack ? "the house-hack" : "the rental property"} is still in play.
+                  The S&P barely edges out buying. A slightly better deal, lower rate, or higher rent could flip this — {hackYears >= years ? "the house-hack" : hackYears === 0 ? "the investment property" : "the hybrid strategy"} is still in play.
                 </div>
               )}
             </div>
@@ -478,7 +498,7 @@ export default function App() {
 
         <div style={{ marginTop: 14, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.03)",
           fontSize: 7, color: "rgba(255,255,255,0.1)", fontFamily: "var(--mono)", textAlign: "center" }}>
-          HOUSE-HACK SHOWDOWN v3.1 · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
+          HOUSE-HACK SHOWDOWN v3.2 · {hackYears >= years ? "house-hack" : hackYears === 0 ? "investment" : "hybrid"} · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
         </div>
       </div>
     </div>
