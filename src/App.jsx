@@ -81,6 +81,9 @@ export default function App() {
     const monthlyR = rate / 100 / 12;
     let balance = loan;
 
+    const yr0NetEq = down - price * (sellingCostPct / 100);
+    const yearlyData = [{ year: 0, totalWealth: portfolioValue + yr0NetEq, portfolioValue, netEquity: yr0NetEq, principalPaid: 0, appreciationGain: 0 }];
+
     for (let y = 1; y <= years; y++) {
       // Pay down mortgage for this year (12 months)
       for (let m = 0; m < 12; m++) { balance = balance * (1 + monthlyR) - monthlyPI; }
@@ -111,6 +114,9 @@ export default function App() {
       const curNet = curPITI + monthlyPMI - curEffRent + ownerUtils + curPersonalRent + curPersonalUtils;
       const curSurplus = curTakeHome - (curNet + curLiving);
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
+
+      const curNE = curHomeValue - balance - curHomeValue * (sellingCostPct / 100);
+      yearlyData.push({ year: y, totalWealth: portfolioValue + curNE, portfolioValue, netEquity: curNE, principalPaid: loan - balance, appreciationGain: curHomeValue - price });
     }
 
     const homeValue = price * Math.pow(1 + appRate / 100, years);
@@ -137,6 +143,7 @@ export default function App() {
       homeValue: Math.round(homeValue), totalRentCollected: Math.round(totalRentCollected),
       balance: Math.round(balance),
       principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
+      yearlyData,
     };
   };
 
@@ -147,6 +154,8 @@ export default function App() {
 
     const year1Expenses = monthlyRent + renterIns + renterUtils + livingMonthly;
     const surplus0 = monthlyIncome - year1Expenses;
+
+    const yearlyData = [{ year: 0, totalWealth: startingCapital, portfolioValue: startingCapital }];
 
     for (let y = 1; y <= years; y++) {
       const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
@@ -159,6 +168,7 @@ export default function App() {
       const curExpenses = curRent + curRenterIns + curRenterUtils + curLiving;
       const curSurplus = curTakeHome - curExpenses;
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
+      yearlyData.push({ year: y, totalWealth: portfolioValue, portfolioValue });
     }
 
     const housingPct = (monthlyRent + renterUtils) / monthlyIncome * 100;
@@ -176,6 +186,7 @@ export default function App() {
       totalWealth: Math.round(portfolioValue),
       homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
       balance: 0,
+      yearlyData,
     };
   };
 
@@ -428,6 +439,146 @@ export default function App() {
                   The S&P barely edges out buying. A slightly better deal, lower rate, or higher rent could flip this — {hackYears >= years ? "the house-hack" : hackYears === 0 ? "the investment property" : "the hybrid strategy"} is still in play.
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* CHARTS */}
+        {(() => {
+          const pad = { top: 20, right: 15, bottom: 28, left: 55 };
+          const W = 500, H = 220;
+          const pW = W - pad.left - pad.right, pH = H - pad.top - pad.bottom;
+          const fmtK = v => { if (Math.abs(v) >= 1e6) return `$${(v/1e6).toFixed(1)}M`; if (Math.abs(v) >= 1e3) return `$${Math.round(v/1e3)}k`; return `$${Math.round(v)}`; };
+
+          // Chart 1: Wealth Race
+          const allPts = [...a.yearlyData.map(d => d.totalWealth), ...b.yearlyData.map(d => d.totalWealth)];
+          const yMin1 = Math.min(0, ...allPts);
+          const yMax1 = Math.max(...allPts) * 1.08;
+          const xS = y => pad.left + (y / years) * pW;
+          const yS1 = v => pad.top + pH - ((v - yMin1) / (yMax1 - yMin1)) * pH;
+          const mkLine = (data, key) => data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.year).toFixed(1)},${yS1(d[key]).toFixed(1)}`).join(' ');
+          const lineA1 = mkLine(a.yearlyData, 'totalWealth');
+          const lineB1 = mkLine(b.yearlyData, 'totalWealth');
+
+          // Y-axis ticks for chart 1
+          const nTicks = 5;
+          const tickStep1 = (yMax1 - yMin1) / nTicks;
+          const ticks1 = Array.from({ length: nTicks + 1 }, (_, i) => yMin1 + i * tickStep1);
+
+          // Chart 2: House-Hack Breakdown (stacked: net equity bottom, portfolio top)
+          const allPts2 = a.yearlyData.map(d => d.portfolioValue + d.netEquity);
+          const yMin2 = Math.min(0, ...a.yearlyData.map(d => d.netEquity));
+          const yMax2 = Math.max(...allPts2) * 1.08;
+          const yS2 = v => pad.top + pH - ((v - yMin2) / (yMax2 - yMin2)) * pH;
+          const tickStep2 = (yMax2 - yMin2) / nTicks;
+          const ticks2 = Array.from({ length: nTicks + 1 }, (_, i) => yMin2 + i * tickStep2);
+
+          const eqArea = a.yearlyData.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.year).toFixed(1)},${yS2(d.netEquity).toFixed(1)}`).join(' ')
+            + ` L${xS(years).toFixed(1)},${yS2(0).toFixed(1)} L${xS(0).toFixed(1)},${yS2(0).toFixed(1)} Z`;
+          const portArea = a.yearlyData.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.year).toFixed(1)},${yS2(d.netEquity + d.portfolioValue).toFixed(1)}`).join(' ')
+            + a.yearlyData.slice().reverse().map(d => ` L${xS(d.year).toFixed(1)},${yS2(d.netEquity).toFixed(1)}`).join('')
+            + ' Z';
+          const totalLine2 = a.yearlyData.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.year).toFixed(1)},${yS2(d.netEquity + d.portfolioValue).toFixed(1)}`).join(' ');
+          const eqLine2 = a.yearlyData.map((d, i) => `${i === 0 ? 'M' : 'L'}${xS(d.year).toFixed(1)},${yS2(d.netEquity).toFixed(1)}`).join(' ');
+
+          // X-axis ticks (shared)
+          const xTicks = [];
+          const xStep = years <= 10 ? 1 : years <= 20 ? 2 : 5;
+          for (let i = 0; i <= years; i += xStep) xTicks.push(i);
+          if (xTicks[xTicks.length - 1] !== years) xTicks.push(years);
+
+          const gridStyle = { stroke: "rgba(255,255,255,0.06)", strokeWidth: 0.5 };
+          const axisLabelStyle = { fill: "rgba(255,255,255,0.25)", fontSize: 8, fontFamily: "var(--mono)" };
+
+          const renderGrid = (yScale, ticks) => (
+            <>
+              {ticks.map((t, i) => <line key={`h${i}`} x1={pad.left} x2={W - pad.right} y1={yScale(t)} y2={yScale(t)} {...gridStyle} />)}
+              {xTicks.map((t, i) => <line key={`v${i}`} x1={xS(t)} x2={xS(t)} y1={pad.top} y2={H - pad.bottom} {...gridStyle} />)}
+              {ticks.map((t, i) => <text key={`yl${i}`} x={pad.left - 5} y={yScale(t) + 3} textAnchor="end" {...axisLabelStyle}>{fmtK(t)}</text>)}
+              {xTicks.map((t, i) => <text key={`xl${i}`} x={xS(t)} y={H - pad.bottom + 14} textAnchor="middle" {...axisLabelStyle}>{t}</text>)}
+              <line x1={pad.left} x2={W - pad.right} y1={yScale(0)} y2={yScale(0)} stroke="rgba(255,255,255,0.12)" strokeWidth={0.5} />
+            </>
+          );
+
+          // Crossover year (for chart 1)
+          let crossYear = null;
+          for (let i = 1; i < a.yearlyData.length; i++) {
+            const aW = a.yearlyData[i].totalWealth, bW = b.yearlyData[i].totalWealth;
+            const aPrev = a.yearlyData[i-1].totalWealth, bPrev = b.yearlyData[i-1].totalWealth;
+            if ((aW - bW) * (aPrev - bPrev) < 0) {
+              const t = (aPrev - bPrev) / ((aPrev - bPrev) - (aW - bW));
+              crossYear = a.yearlyData[i-1].year + t;
+              break;
+            }
+          }
+
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              {/* Wealth Race */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "14px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#fbbf24", fontFamily: "var(--mono)" }}>TOTAL WEALTH OVER TIME</div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 10, height: 2, background: COLORS.A, borderRadius: 1 }} />
+                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)" }}>House-Hack</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 10, height: 2, background: COLORS.B, borderRadius: 1 }} />
+                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)" }}>S&P</span>
+                    </div>
+                  </div>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+                  {renderGrid(yS1, ticks1)}
+                  <path d={lineA1} fill="none" stroke={COLORS.A} strokeWidth={2} />
+                  <path d={lineB1} fill="none" stroke={COLORS.B} strokeWidth={2} />
+                  {crossYear !== null && (
+                    <g>
+                      <line x1={xS(crossYear)} x2={xS(crossYear)} y1={pad.top} y2={H - pad.bottom} stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} strokeDasharray="3,3" />
+                      <text x={xS(crossYear)} y={pad.top - 5} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize={7} fontFamily="var(--mono)">yr {crossYear.toFixed(1)}</text>
+                    </g>
+                  )}
+                  {/* End markers */}
+                  <circle cx={xS(years)} cy={yS1(a.yearlyData[years].totalWealth)} r={3} fill={COLORS.A} />
+                  <circle cx={xS(years)} cy={yS1(b.yearlyData[years].totalWealth)} r={3} fill={COLORS.B} />
+                </svg>
+                {crossYear !== null && (
+                  <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "var(--mono)", marginTop: 4 }}>
+                    Crossover at year {crossYear.toFixed(1)} — {crossYear < years / 2 ? "house-hack pulls ahead early" : "house-hack takes time to overcome upfront costs"}
+                  </div>
+                )}
+              </div>
+
+              {/* House-Hack Anatomy */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "14px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#fbbf24", fontFamily: "var(--mono)" }}>HOUSE-HACK BREAKDOWN</div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 10, height: 6, background: `${BGS.A}0.3)`, border: `1px solid ${COLORS.A}`, borderRadius: 1 }} />
+                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)" }}>Net Equity</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 10, height: 6, background: "rgba(96,165,250,0.3)", border: "1px solid #60a5fa", borderRadius: 1 }} />
+                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)" }}>Portfolio</span>
+                    </div>
+                  </div>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+                  {renderGrid(yS2, ticks2)}
+                  <path d={portArea} fill="rgba(96,165,250,0.12)" />
+                  <path d={eqArea} fill={`${BGS.A}0.15)`} />
+                  <path d={eqLine2} fill="none" stroke={COLORS.A} strokeWidth={1.5} />
+                  <path d={totalLine2} fill="none" stroke="#60a5fa" strokeWidth={1.5} />
+                  {/* End labels */}
+                  <circle cx={xS(years)} cy={yS2(a.yearlyData[years].netEquity)} r={3} fill={COLORS.A} />
+                  <circle cx={xS(years)} cy={yS2(a.yearlyData[years].netEquity + a.yearlyData[years].portfolioValue)} r={3} fill="#60a5fa" />
+                </svg>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "var(--mono)", marginTop: 4 }}>
+                  Year {years}: {fmtK(a.netEquity)} equity + {fmtK(a.portfolioValue)} portfolio = {fmtK(a.totalWealth)} total
+                </div>
+              </div>
             </div>
           );
         })()}
