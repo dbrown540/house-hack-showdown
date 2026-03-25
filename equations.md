@@ -5,48 +5,74 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 ## 1) Inputs (state variables)
 
 ### Personal finance
-- `startingCapital`: cash available on day 1.
-- `takeHome`: take-home pay per paycheck.
-- `weeklyCost`: groceries + gas per week.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `startingCapital` | Starting Capital | Cash available on day 1 |
+| `takeHome` | Take-Home / Check | Take-home pay per paycheck |
+| `weeklyCost` | Groceries + Gas / Wk | Weekly living cost (groceries + gas) |
 
 ### Property 1 mortgage terms
-- `downPct`: down payment %.
-- `rate`: mortgage rate (% annual).
-- `taxPct`: property tax (% annual of home value).
-- `insPct`: home insurance (% annual of home value).
-- `pmiRate`: PMI rate (% annual of original loan; active while LTV > 80% and down < 20%).
-- `buyClosingCostPct`: buyer closing cost %.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `downPct` | Down Payment % | Down payment as % of price |
+| `rate` | Mortgage Rate | Annual mortgage interest rate (%) |
+| `taxPct` | Property Tax | Annual property tax as % of home value |
+| `insPct` | Home Insurance % | Annual home insurance as % of home value |
+| `pmiRate` | PMI Rate (if <20% down) | Annual PMI rate as % of original loan |
+| `buyClosingCostPct` | Buy Closing Costs | Buyer closing cost as % of price |
 
 ### Property costs
-- `utilities`: monthly utilities for property 1.
-- `hoa`: monthly HOA for property 1.
-- `maintVacancyPct`: rent haircut for maintenance/vacancy.
-- `emergencyPct`: emergency fund set-aside (% of price).
-- `sellingCostPct`: selling cost % at exit (used for liquidation equity only).
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `utilities` | Property Utilities / Mo | Monthly utilities for property 1 |
+| `hoa` | HOA / Mo (Property 1) | Monthly HOA for property 1 |
+| `maintVacancyPct` | Maint. & Vacancy | Rent haircut % for maintenance/vacancy |
+| `emergencyPct` | Emergency Fund % of Price | Emergency fund set-aside as % of price |
+| `sellingCostPct` | Cost to Sell | Selling cost % (used for liquidation equity only) |
 
 ### Market and timing
-- `inflationRate`: annual inflation for variable expenses.
-- `investRet`: annual portfolio return.
-- `hackYears`: years living in property 1 while house-hacking.
-- `years`: total projection horizon.
-- `tenantPaysUtils`: after move-out, whether tenant covers property 1 utilities.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `inflationRate` | General Inflation | Annual inflation rate for variable expenses (%) |
+| `investRet` | Investment Return | Annual portfolio return (%) |
+| `hackYears` | House-Hack Years | Years living in property 1 while house-hacking |
+| `years` | Projection Years | Total projection horizon |
+| `tenantPaysUtils` | Tenant pays utilities after move-out | Toggle: whether tenant covers property 1 utilities after move-out |
 
 ### Option A (house-hack property)
-- `pA`: purchase price.
-- `rA`: monthly rent during hack phase.
-- `fullRentA`: monthly rent after move-out.
-- `repA`: upfront repairs.
-- `appA`: annual appreciation rate.
-- `rgA`: annual rent growth.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `pA` | Home Price | Purchase price |
+| `rA` | Rental Income / Mo | Monthly rent collected during hack phase |
+| `fullRentA` | Full Rent / Mo (after move-out) | Monthly rent after owner moves out |
+| `repA` | Upfront Repairs | One-time repair cost at purchase |
+| `appA` | Appreciation | Annual appreciation rate (%) |
+| `rgA` | Rent Growth | Annual rent growth rate (%) |
 
 ### Phase 2 personal housing
-- `phase2Mode`: `"rent"` or `"buy"`.
-- Both modes: `phase2Utils` (monthly utilities for personal residence after move-out).
-- Rent mode: `phase2Rent`, `phase2RentGrowth`, `phase2RenterIns` (monthly renter's insurance).
-- Buy mode: `phase2Price`, `phase2DownPct`, `phase2MortRate`, `phase2PmiRate`, `phase2App`, `phase2TaxPct`, `phase2InsPct`, `phase2Hoa`.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `phase2Mode` | Rent / Buy toggle | Phase 2 housing mode: `"rent"` or `"buy"` |
+| `phase2Utils` | Phase 2 Utilities / Mo | Monthly utilities for personal residence after move-out (both modes) |
+| `phase2Rent` | Phase 2 Personal Rent | Monthly rent in phase 2 (rent mode) |
+| `phase2RentGrowth` | Phase 2 Rent Growth | Annual rent growth in phase 2 (%) (rent mode) |
+| `phase2RenterIns` | Phase 2 Renter's Insurance / Mo | Monthly renter's insurance (rent mode) |
+| `phase2Price` | Phase 2 Home Price | Purchase price of phase 2 home (buy mode) |
+| `phase2DownPct` | Phase 2 Down Payment % | Down payment % for phase 2 home (buy mode) |
+| `phase2MortRate` | Phase 2 Mortgage Rate | Mortgage rate for phase 2 home (%) (buy mode) |
+| `phase2PmiRate` | Phase 2 PMI Rate (if <20% down) | PMI rate for phase 2 home (%) (buy mode) |
+| `phase2App` | Phase 2 Appreciation | Annual appreciation for phase 2 home (%) (buy mode) |
+| `phase2TaxPct` | Phase 2 Property Tax | Annual property tax for phase 2 home (%) (buy mode) |
+| `phase2InsPct` | Phase 2 Home Insurance | Annual insurance for phase 2 home (%) (buy mode) |
+| `phase2Hoa` | Phase 2 HOA / Mo | Monthly HOA for phase 2 home (buy mode) |
 
 ### Option B (never buy)
-- `monthlyRent`, `rentInflation`, `renterIns`, `renterUtils`.
+| Variable | UI Label | Description |
+|----------|----------|-------------|
+| `monthlyRent` | Monthly Rent | Monthly rent paid |
+| `rentInflation` | Rent Inflation / Yr | Annual rent inflation rate (%) |
+| `renterIns` | Renter's Insurance / Mo | Monthly renter's insurance |
+| `renterUtils` | Utilities / Mo | Monthly utilities |
 
 ## 2) Shared derived variables
 - `livingMonthly = weeklyCost * 52 / 12`
@@ -177,6 +203,42 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - `underfunded = (leftoverCapital < 0)` — results assume $0 initial portfolio if true
 - `p2Underfunded = portfolioValue < p2TotalCash` at transition year — results may be unreliable if true
 - `surplusChk = round(surplus / 2)` (per-paycheck surplus display)
+
+### Output variable → UI label mapping (comparison table)
+
+| Variable | UI Label | Shown For |
+|----------|----------|-----------|
+| `cashToClose` | Cash to Close | A only |
+| `buyClosingCosts` | Buy Closing Costs | A only |
+| `emergencyFund` | Emergency Fund (set aside) | A only |
+| `leftoverCapital` | Leftover Capital → Invested Day 1 | A = leftover, B = startingCapital |
+| `totalPITI` | Mortgage PITI | A only |
+| `hoaYear1` | HOA Fees | A only |
+| `monthlyRent` | Rent Paid | B only |
+| `effectiveRentYear1` | Effective Rental Income | A only |
+| `housingPctGross` | Housing % of Take-Home | A and B |
+| `netHousing` | Net Housing Cost | A and B |
+| `totalExpenses` | Total Monthly Expenses | A and B |
+| `surplus` | Monthly Surplus → Invest | A and B |
+| `surplusChk` | Surplus / Check | A and B |
+| `homeValue` | Home Value (Property 1) | A only |
+| `balance` | Remaining Mortgage (Property 1) | A only |
+| `principalPaid` | Principal Paid (equity earned) | A only |
+| `appreciationGain` | Appreciation Gain | A only |
+| `grossEquity` | Hold Equity (Property 1) | A only |
+| `sellingCost` | Cost to Sell (X%) | A only |
+| `netEquityLiq` | Liquidation Equity (Property 1) | A only |
+| `p2HomeValue` | Phase 2 Home Value | A only (if phase2Mode=buy) |
+| `p2Balance` | Phase 2 Remaining Mortgage | A only (if phase2Mode=buy) |
+| `p2NetEquity` | Phase 2 Hold Equity | A only (if phase2Mode=buy) |
+| `p2SellingCost` | Phase 2 Cost to Sell (X%) | A only (if phase2Mode=buy) |
+| `p2NetEquityLiq` | Phase 2 Liquidation Equity | A only (if phase2Mode=buy) |
+| `netEquity + p2NetEquity` | Combined Hold Equity | A only (if phase2Mode=buy) |
+| `totalRentCollected` | Total Rent Collected | A only |
+| `totalRentPaid` | Total Rent Paid | B only |
+| `portfolioValue` | Investment Portfolio | A and B |
+| `totalWealth` | HOLD NET WORTH | A and B (primary comparison) |
+| `totalWealthLiq` | LIQUIDATION NET WORTH | A and B (secondary) |
 
 ## 5) Option B equations (`calcNeverBuy`)
 - Year 1:
