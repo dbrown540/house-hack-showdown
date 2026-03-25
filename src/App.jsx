@@ -119,6 +119,9 @@ export default function App() {
     const netEquity = grossEquity - sellingCost;
     const totalWealth = portfolioValue + netEquity;
 
+    const principalPaid = loan - balance;
+    const appreciationGain = homeValue - price;
+
     const underfunded = leftoverCapital < 0;
 
     return {
@@ -133,6 +136,7 @@ export default function App() {
       netEquity: Math.round(netEquity), totalWealth: Math.round(totalWealth),
       homeValue: Math.round(homeValue), totalRentCollected: Math.round(totalRentCollected),
       balance: Math.round(balance),
+      principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
     };
   };
 
@@ -208,6 +212,10 @@ export default function App() {
   const loserW = Math.min(...allW);
   const marginPct = loserW > 0 ? (margin / loserW * 100) : 0;
   const marginPerYear = margin / years;
+
+  // CAGR: effective annualized return on starting capital
+  const cagrA = startingCapital > 0 && years > 0 ? (Math.pow(a.totalWealth / startingCapital, 1 / years) - 1) * 100 : 0;
+  const cagrB = startingCapital > 0 && years > 0 ? (Math.pow(b.totalWealth / startingCapital, 1 / years) - 1) * 100 : 0;
 
   // Binary search: what S&P return makes the renter match the house-hack?
   const spBreakeven = useMemo(() => {
@@ -348,6 +356,7 @@ export default function App() {
               {winIdx === 1
                 ? `The S&P outpaces the house-hack. Rental income doesn't overcome mortgage overhead + selling costs at these assumptions.`
                 : `The house-hack wins through leverage, rental income, and appreciation. S&P-only trails by ${fmt(margin)}.`}
+              {` Effective CAGR: house-hack `}<span style={{ color: COLORS.A }}>{cagrA.toFixed(1)}%</span>{` vs. S&P `}<span style={{ color: COLORS.B }}>{cagrB.toFixed(1)}%</span>{` on your ${fmt(startingCapital)}.`}
             </div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -453,11 +462,15 @@ export default function App() {
           <Row3 label={`${years}-YEAR OUTCOME`} section />
           <Row3 label="Home Value" vals={[a.homeValue, null]} />
           <Row3 label="Remaining Mortgage" vals={[a.balance, null]} />
+          <Row3 label="Principal Paid (equity earned)" vals={[a.principalPaid, null]} />
+          <Row3 label="Appreciation Gain" vals={[a.appreciationGain, null]} />
           <Row3 label={`Cost to Sell (${sellingCostPct}%)`} vals={[-a.sellingCost, 0]} winIdx={1} flipColor />
-          <Row3 label="Net Home Equity" vals={[a.netEquity, 0]} winIdx={wHigh(a.netEquity, 0)} />
+          <Row3 label="Net Home Equity" vals={[a.netEquity, 0]} winIdx={wHigh(a.netEquity, 0)} highlight />
+          <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
           <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
           <Row3 label="LIQUID NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
+          <Row3 label="Effective CAGR" vals={[cagrA, cagrB]} fmtFn={v => v.toFixed(1) + "%"} winIdx={wHigh(cagrA, cagrB)} highlight />
 
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", padding: "10px 12px",
             background: `${BGS[winLabel]}0.05)`, borderTop: `2px solid ${BGS[winLabel]}0.2)` }}>
