@@ -7,10 +7,10 @@ export const Row3 = ({ label, vals, fmtFn = fmt, winIdx, highlight = false, sect
       <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: "#fbbf24", fontFamily: "var(--mono)" }}>{label}</span>
     </div>
   );
-  const cols = [COLORS.A, COLORS.B, COLORS.C];
-  const bgs = [BGS.A, BGS.B, BGS.C];
+  const cols = [COLORS.A, COLORS.B];
+  const bgs = [BGS.A, BGS.B];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1fr", gap: 0, padding: "6px 12px",
+    <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 0, padding: "6px 12px",
       background: highlight ? "rgba(255,255,255,0.015)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.025)" }}>
       <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: "var(--body)", display: "flex", alignItems: "center" }}>{label}</div>
       {vals.map((v, i) => {
