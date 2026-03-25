@@ -12,24 +12,31 @@ import { COLORS, BGS } from "./utils/constants";
 ═══════════════════════════════════════════════════════════════*/
 
 export default function App() {
-  // ── SHARED ──
+  // ── PERSONAL FINANCE ──
+  const [startingCapital, setStartingCapital] = useState(50000);
   const [takeHome, setTakeHome] = useState(2600);
   const [weeklyCost, setWeeklyCost] = useState(75);
-  const [utilities, setUtilities] = useState(500);
-  const [startingCapital, setStartingCapital] = useState(50000);
+
+  // ── MORTGAGE TERMS ──
   const [downPct, setDownPct] = useState(3);
-  const [buyClosingCostPct, setBuyClosingCostPct] = useState(3);
   const [rate, setRate] = useState(5.875);
   const [taxPct, setTaxPct] = useState(1.21);
   const [insPct, setInsPct] = useState(0.5);
-  const [investRet, setInvestRet] = useState(10);
-  const [inflationRate, setInflationRate] = useState(3.0);
-  const [years, setYears] = useState(10);
-  const [maintVacancyPct, setMaintVacancyPct] = useState(5);
-  const [sellingCostPct, setSellingCostPct] = useState(5);
   const [pmiRate, setPmiRate] = useState(0.5);
+  const [buyClosingCostPct, setBuyClosingCostPct] = useState(3);
+
+  // ── PROPERTY COSTS ──
+  const [utilities, setUtilities] = useState(500);
+  const [hoa, setHoa] = useState(0);
+  const [maintVacancyPct, setMaintVacancyPct] = useState(5);
   const [emergencyPct, setEmergencyPct] = useState(1);
+  const [sellingCostPct, setSellingCostPct] = useState(5);
+
+  // ── MARKET & TIMING ──
+  const [inflationRate, setInflationRate] = useState(3.0);
+  const [investRet, setInvestRet] = useState(10);
   const [hackYears, setHackYears] = useState(2);
+  const [years, setYears] = useState(10);
   const [tenantPaysUtils, setTenantPaysUtils] = useState(true);
 
   // ── A: HOUSE-HACK ──
@@ -41,8 +48,17 @@ export default function App() {
   const [rgA, setRgA] = useState(2);
 
   // ── PHASE 2 PERSONAL HOUSING ──
+  const [phase2Mode, setPhase2Mode] = useState("rent"); // "rent" | "buy"
   const [phase2Rent, setPhase2Rent] = useState(1000);
   const [phase2RentGrowth, setPhase2RentGrowth] = useState(3);
+  // Phase 2 Buy
+  const [phase2Price, setPhase2Price] = useState(350000);
+  const [phase2DownPct, setPhase2DownPct] = useState(5);
+  const [phase2MortRate, setPhase2MortRate] = useState(5.875);
+  const [phase2App, setPhase2App] = useState(3);
+  const [phase2TaxPct, setPhase2TaxPct] = useState(1.21);
+  const [phase2InsPct, setPhase2InsPct] = useState(0.5);
+  const [phase2Hoa, setPhase2Hoa] = useState(0);
 
   // ── B: NEVER BUY ──
   const [monthlyRent, setMonthlyRent] = useState(1000);
@@ -71,7 +87,7 @@ export default function App() {
     // Phase 1 (house-hack) year 1 snapshot
     const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
     const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
-    const netHousing = totalPITI + initialPMI - effectiveRentYear1 + utilities;
+    const netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
     const surplus = monthlyIncome - totalExpenses;
     const housingPctGross = netHousing / monthlyIncome * 100;
@@ -80,6 +96,15 @@ export default function App() {
     let totalRentCollected = 0;
     const monthlyR = rate / 100 / 12;
     let balance = loan;
+
+    // Phase 2 buy tracking
+    let p2Balance = 0;
+    let p2MonthlyPI = 0;
+    let p2BaseTax = 0;
+    let p2BaseIns = 0;
+    let p2Loan = 0;
+    let p2Down = 0;
+    let p2ClosingCosts = 0;
 
     const yr0NetEq = down - price * (sellingCostPct / 100);
     const yearlyData = [{ year: 0, totalWealth: portfolioValue + yr0NetEq, portfolioValue, netEquity: yr0NetEq, principalPaid: 0, appreciationGain: 0 }];
@@ -98,6 +123,7 @@ export default function App() {
       totalRentCollected += curEffRent * 12;
       const curTakeHome = monthlyIncome * Math.pow(1.03, y - 1);
       const curUtils = utilities * inflFactor;
+      const curHoa = hoa * inflFactor;
       const curLiving = livingMonthly * inflFactor;
       const curTax = monthlyTax * inflFactor;
       const curIns = monthlyIns * inflFactor;
@@ -107,23 +133,70 @@ export default function App() {
       const curHomeValue = price * Math.pow(1 + appRate / 100, y);
       const monthlyPMI = (balance > 0.8 * curHomeValue && downPct < 20) ? (pmiRate / 100) * loan / 12 : 0;
 
-      // Phase 2: you pay rent elsewhere + property expenses, but collect full rent
-      const curPersonalRent = inHackPhase ? 0 : phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - hackYears - 1);
+      // Phase 2: buy second property at transition year
+      if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
+        p2Down = Math.round(phase2Price * phase2DownPct / 100);
+        p2ClosingCosts = Math.round(phase2Price * (buyClosingCostPct / 100));
+        p2Loan = phase2Price - p2Down;
+        p2MonthlyPI = pmt(phase2MortRate / 100, 30, p2Loan);
+        p2BaseTax = Math.round(phase2Price * phase2TaxPct / 100 / 12);
+        p2BaseIns = Math.round(phase2Price * phase2InsPct / 100 / 12);
+        p2Balance = p2Loan;
+        portfolioValue -= (p2Down + p2ClosingCosts);
+      }
+
+      // Pay down Phase 2 mortgage
+      if (!inHackPhase && phase2Mode === 'buy' && p2Balance > 0) {
+        const p2MonthlyR = phase2MortRate / 100 / 12;
+        for (let m = 0; m < 12; m++) { p2Balance = p2Balance * (1 + p2MonthlyR) - p2MonthlyPI; }
+        p2Balance = Math.max(p2Balance, 0);
+      }
+
+      // Phase 2 personal housing cost
+      let curPersonalHousing = 0;
       const curPersonalUtils = inHackPhase ? 0 : curUtils;
+      if (!inHackPhase) {
+        if (phase2Mode === 'rent') {
+          curPersonalHousing = phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - hackYears - 1);
+        } else {
+          // Phase 2 buy: PITI (PI fixed, tax/ins inflate)
+          const p2InflFactor = Math.pow(1 + inflationRate / 100, y - hackYears - 1);
+          curPersonalHousing = p2MonthlyPI + p2BaseTax * p2InflFactor + p2BaseIns * p2InflFactor + phase2Hoa * p2InflFactor;
+        }
+      }
+
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
-      const curNet = curPITI + monthlyPMI - curEffRent + ownerUtils + curPersonalRent + curPersonalUtils;
+      const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils;
       const curSurplus = curTakeHome - (curNet + curLiving);
       portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
 
+      // Phase 2 equity
+      let p2NetEquity = 0;
+      if (!inHackPhase && phase2Mode === 'buy') {
+        const p2HomeValue = phase2Price * Math.pow(1 + phase2App / 100, y - hackYears);
+        p2NetEquity = p2HomeValue - p2Balance - p2HomeValue * (sellingCostPct / 100);
+      }
+
       const curNE = curHomeValue - balance - curHomeValue * (sellingCostPct / 100);
-      yearlyData.push({ year: y, totalWealth: portfolioValue + curNE, portfolioValue, netEquity: curNE, principalPaid: loan - balance, appreciationGain: curHomeValue - price });
+      yearlyData.push({ year: y, totalWealth: portfolioValue + curNE + p2NetEquity, portfolioValue, netEquity: curNE + p2NetEquity, principalPaid: loan - balance, appreciationGain: curHomeValue - price });
     }
 
     const homeValue = price * Math.pow(1 + appRate / 100, years);
     const grossEquity = homeValue - balance;
     const sellingCost = homeValue * (sellingCostPct / 100);
     const netEquity = grossEquity - sellingCost;
-    const totalWealth = portfolioValue + netEquity;
+
+    // Phase 2 final values
+    let p2FinalHomeValue = 0;
+    let p2FinalSellingCost = 0;
+    let p2FinalNetEquity = 0;
+    if (phase2Mode === 'buy' && years > hackYears) {
+      p2FinalHomeValue = phase2Price * Math.pow(1 + phase2App / 100, years - hackYears);
+      p2FinalSellingCost = p2FinalHomeValue * (sellingCostPct / 100);
+      p2FinalNetEquity = p2FinalHomeValue - p2Balance - p2FinalSellingCost;
+    }
+
+    const totalWealth = portfolioValue + netEquity + p2FinalNetEquity;
 
     const principalPaid = loan - balance;
     const appreciationGain = homeValue - price;
@@ -135,6 +208,7 @@ export default function App() {
       leftoverCapital: Math.round(leftoverCapital), underfunded,
       effectiveRentYear1: Math.round(effectiveRentYear1),
       netHousing: Math.round(netHousing), totalExpenses: Math.round(totalExpenses),
+      hoaYear1: Math.round(hoa),
       surplus: Math.round(surplus), surplusChk: Math.round(surplus / 2),
       housingPctGross,
       portfolioValue: Math.round(portfolioValue),
@@ -144,6 +218,13 @@ export default function App() {
       balance: Math.round(balance),
       principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
       yearlyData,
+      // Phase 2 buy fields
+      p2HomeValue: Math.round(p2FinalHomeValue),
+      p2NetEquity: Math.round(p2FinalNetEquity),
+      p2Balance: Math.round(p2Balance),
+      p2SellingCost: Math.round(p2FinalSellingCost),
+      p2Down, p2ClosingCosts,
+      p2CashToClose: p2Down + p2ClosingCosts,
     };
   };
 
@@ -179,6 +260,7 @@ export default function App() {
       effectiveRentYear1: 0,
       netHousing: Math.round(monthlyRent + renterIns + renterUtils),
       totalExpenses: Math.round(monthlyRent + renterIns + renterUtils + livingMonthly),
+      hoaYear1: 0,
       surplus: Math.round(surplus0), surplusChk: Math.round(surplus0 / 2),
       housingPctGross: housingPct,
       portfolioValue: Math.round(portfolioValue),
@@ -187,10 +269,11 @@ export default function App() {
       homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
       balance: 0,
       yearlyData,
+      p2HomeValue: 0, p2NetEquity: 0, p2Balance: 0, p2SellingCost: 0, p2Down: 0, p2ClosingCosts: 0, p2CashToClose: 0,
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, monthlyRent, rentInflation, pmiRate, renterUtils];
+  const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
 
@@ -247,6 +330,8 @@ export default function App() {
     return v.indexOf(m);
   };
 
+  const groupLabelStyle = { fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,0.15)", fontFamily: "var(--mono)", marginBottom: 6, marginTop: 10 };
+
   return (
     <div style={{ "--mono": "'JetBrains Mono', monospace", "--body": "'Outfit', sans-serif",
       background: "#080b12", minHeight: "100vh", color: "#dce4f0", fontFamily: "var(--body)" }}>
@@ -268,31 +353,89 @@ export default function App() {
 
       <div style={{ maxWidth: 1150, margin: "0 auto", padding: "18px 20px 48px" }}>
 
-        {/* SHARED */}
+        {/* SHARED ASSUMPTIONS */}
         <div style={{ marginBottom: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
           borderRadius: 10, padding: "14px 18px" }}>
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", marginBottom: 10 }}>SHARED ASSUMPTIONS</div>
+
+          {/* Personal Finance */}
+          <div style={groupLabelStyle}>PERSONAL FINANCE</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
             <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={5000} max={300000} step={1000} color="#fff" />
             <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={8000} step={50} color="#fff" />
             <Slider label="Groceries + Gas / Wk" value={weeklyCost} onChange={setWeeklyCost} min={50} max={200} step={5} color="#fff" />
-            <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
-            <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
-            <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
-            <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
-            <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" />
-            <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" />
+          </div>
+
+          {/* Mortgage Terms */}
+          <div style={groupLabelStyle}>MORTGAGE TERMS (PROPERTY 1)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
             <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
             <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
             <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
             <Slider label="PMI Rate (if <20% down)" value={pmiRate} onChange={setPmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
+            <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
+          </div>
+
+          {/* Property Costs */}
+          <div style={groupLabelStyle}>PROPERTY COSTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
+            <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
+            <Slider label="HOA / Mo (Property 1)" value={hoa} onChange={setHoa} min={0} max={1200} step={25} color="#fff" />
+            <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
+            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
+            <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
+          </div>
+
+          {/* Market & Timing */}
+          <div style={groupLabelStyle}>MARKET & TIMING</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
+            <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" />
             <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" />
+            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
             <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" />
           </div>
+
+          {/* Phase 2 Housing */}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,0.15)", fontFamily: "var(--mono)" }}>PHASE 2 HOUSING (AFTER MOVE-OUT)</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 10, color: phase2Mode === "rent" ? "#fff" : "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", cursor: "pointer" }}
+                  onClick={() => setPhase2Mode("rent")}>Rent</span>
+                <div onClick={() => setPhase2Mode(phase2Mode === "rent" ? "buy" : "rent")} style={{
+                  width: 36, height: 18, borderRadius: 9, cursor: "pointer",
+                  background: phase2Mode === "buy" ? "#22c55e" : "rgba(255,255,255,0.15)",
+                  position: "relative", transition: "background 0.2s", flexShrink: 0
+                }}>
+                  <div style={{
+                    width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                    position: "absolute", top: 2, left: phase2Mode === "buy" ? 20 : 2, transition: "left 0.2s"
+                  }} />
+                </div>
+                <span style={{ fontSize: 10, color: phase2Mode === "buy" ? "#22c55e" : "rgba(255,255,255,0.25)", fontFamily: "var(--mono)", cursor: "pointer" }}
+                  onClick={() => setPhase2Mode("buy")}>Buy</span>
+              </div>
+            </div>
+            {phase2Mode === "rent" ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
+                <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" />
+                <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" />
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
+                <Slider label="Phase 2 Home Price" value={phase2Price} onChange={setPhase2Price} min={100000} max={750000} step={5000} color="#22c55e" />
+                <Slider label="Phase 2 Down Payment %" value={phase2DownPct} onChange={setPhase2DownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 Mortgage Rate" value={phase2MortRate} onChange={setPhase2MortRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 Appreciation" value={phase2App} onChange={setPhase2App} min={0} max={6} step={0.25} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 Property Tax" value={phase2TaxPct} onChange={setPhase2TaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 Home Insurance" value={phase2InsPct} onChange={setPhase2InsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 HOA / Mo" value={phase2Hoa} onChange={setPhase2Hoa} min={0} max={1200} step={25} color="#22c55e" />
+              </div>
+            )}
+          </div>
+
+          {/* Toggles & Warnings */}
           <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div onClick={() => setTenantPaysUtils(!tenantPaysUtils)} style={{
@@ -601,6 +744,7 @@ export default function App() {
 
           <Row3 label="MONTHLY PICTURE (YEAR 1)" section />
           <Row3 label="Mortgage PITI" vals={[a.totalPITI, null]} />
+          <Row3 label="HOA Fees" vals={[a.hoaYear1, 0]} />
           <Row3 label="Rent Paid" vals={[null, monthlyRent]} />
           <Row3 label="Effective Rental Income" vals={[a.effectiveRentYear1, null]} />
           <Row3 label="Housing % of Take-Home" vals={[a.housingPctGross, b.housingPctGross]}
@@ -611,12 +755,22 @@ export default function App() {
           <Row3 label="Surplus / Check" vals={[a.surplusChk, b.surplusChk]} winIdx={wHigh(a.surplusChk, b.surplusChk)} />
 
           <Row3 label={`${years}-YEAR OUTCOME`} section />
-          <Row3 label="Home Value" vals={[a.homeValue, null]} />
-          <Row3 label="Remaining Mortgage" vals={[a.balance, null]} />
+          <Row3 label="Home Value (Property 1)" vals={[a.homeValue, null]} />
+          <Row3 label="Remaining Mortgage (Property 1)" vals={[a.balance, null]} />
           <Row3 label="Principal Paid (equity earned)" vals={[a.principalPaid, null]} />
           <Row3 label="Appreciation Gain" vals={[a.appreciationGain, null]} />
           <Row3 label={`Cost to Sell (${sellingCostPct}%)`} vals={[-a.sellingCost, 0]} winIdx={1} flipColor />
-          <Row3 label="Net Home Equity" vals={[a.netEquity, 0]} winIdx={wHigh(a.netEquity, 0)} highlight />
+          <Row3 label="Net Home Equity (Property 1)" vals={[a.netEquity, 0]} winIdx={wHigh(a.netEquity, 0)} highlight />
+          {phase2Mode === 'buy' && years > hackYears && (
+            <>
+              <Row3 label="PHASE 2 PROPERTY" section />
+              <Row3 label="Phase 2 Home Value" vals={[a.p2HomeValue, null]} />
+              <Row3 label="Phase 2 Remaining Mortgage" vals={[a.p2Balance, null]} />
+              <Row3 label={`Phase 2 Cost to Sell (${sellingCostPct}%)`} vals={[-a.p2SellingCost, 0]} winIdx={1} flipColor />
+              <Row3 label="Phase 2 Net Equity" vals={[a.p2NetEquity, 0]} winIdx={wHigh(a.p2NetEquity, 0)} highlight />
+              <Row3 label="Combined Property Equity" vals={[a.netEquity + a.p2NetEquity, 0]} winIdx={wHigh(a.netEquity + a.p2NetEquity, 0)} highlight />
+            </>
+          )}
           <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
           <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
@@ -649,6 +803,13 @@ export default function App() {
               Over {years} years, the renter's housing cost rises from {fmt(monthlyRent)} to {fmt(Math.round(monthlyRent * Math.pow(1 + rentInflation / 100, years)))}/mo.
               The homeowner's P&I never changes. That widening gap compounds.
             </div>
+            {phase2Mode === 'buy' && years > hackYears && (
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+                <strong style={{ color: "#fff" }}>Phase 2: building equity in a second home.</strong> Instead of renting after moving out, you buy a {fmt(phase2Price)} home.
+                The {fmt(a.p2CashToClose)} cash-to-close comes from your portfolio at year {hackYears}, but you build {fmt(a.p2NetEquity)} in equity over {years - hackYears} years
+                at {phase2App}% appreciation — turning a housing expense into a wealth-building asset.
+              </div>
+            )}
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
               <strong style={{ color: "#fff" }}>Selling costs are the house-hack's tax.</strong> At {sellingCostPct}%, selling a {fmt(a.homeValue)} home costs {fmt(a.sellingCost)}.
               The renter pays $0 to exit. {sellingCostPct >= 6 ? "Try reducing selling costs to 5% (discount broker) to see how it shifts the outcome." : ""}
@@ -683,7 +844,7 @@ export default function App() {
 
         <div style={{ marginTop: 14, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.03)",
           fontSize: 7, color: "rgba(255,255,255,0.1)", fontFamily: "var(--mono)", textAlign: "center" }}>
-          HOUSE-HACK SHOWDOWN v4 · {hackYears >= years ? "house-hack" : hackYears === 0 ? "investment" : "hybrid"} · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
+          HOUSE-HACK SHOWDOWN v4 · {hackYears >= years ? "house-hack" : hackYears === 0 ? "investment" : "hybrid"} · phase 2: {phase2Mode} · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
         </div>
       </div>
     </div>
