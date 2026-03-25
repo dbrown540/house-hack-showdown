@@ -5,7 +5,7 @@ import { pmt, calcRequiredMonthlyRent, fmt } from "./utils/math";
 import { COLORS, BGS } from "./utils/constants";
 
 /*═══════════════════════════════════════════════════════════════
-  HOUSE-HACK SHOWDOWN v4
+  HOUSE-HACK SHOWDOWN v5
   House-Hack vs. Never Buy (S&P 500)
   Based on user's corrected calc engine with inflation,
   vacancy, selling costs, starting capital, and leftover invest.
@@ -51,10 +51,13 @@ export default function App() {
   const [phase2Mode, setPhase2Mode] = useState("rent"); // "rent" | "buy"
   const [phase2Rent, setPhase2Rent] = useState(1000);
   const [phase2RentGrowth, setPhase2RentGrowth] = useState(3);
+  const [phase2Utils, setPhase2Utils] = useState(300);
+  const [phase2RenterIns, setPhase2RenterIns] = useState(15);
   // Phase 2 Buy
   const [phase2Price, setPhase2Price] = useState(350000);
   const [phase2DownPct, setPhase2DownPct] = useState(5);
   const [phase2MortRate, setPhase2MortRate] = useState(5.875);
+  const [phase2PmiRate, setPhase2PmiRate] = useState(0.5);
   const [phase2App, setPhase2App] = useState(3);
   const [phase2TaxPct, setPhase2TaxPct] = useState(1.21);
   const [phase2InsPct, setPhase2InsPct] = useState(0.5);
@@ -105,9 +108,12 @@ export default function App() {
     let p2Loan = 0;
     let p2Down = 0;
     let p2ClosingCosts = 0;
+    let p2EmergencyFund = 0;
+    let p2Underfunded = false;
 
-    const yr0NetEq = down - price * (sellingCostPct / 100);
-    const yearlyData = [{ year: 0, totalWealth: portfolioValue + yr0NetEq, portfolioValue, netEquity: yr0NetEq, principalPaid: 0, appreciationGain: 0 }];
+    const yr0HoldEq = down;
+    const yr0LiqEq = down - price * (sellingCostPct / 100);
+    const yearlyData = [{ year: 0, totalWealth: portfolioValue + yr0HoldEq, totalWealthLiq: portfolioValue + yr0LiqEq, portfolioValue, netEquity: yr0HoldEq, netEquityLiq: yr0LiqEq, principalPaid: 0, appreciationGain: 0 }];
 
     for (let y = 1; y <= years; y++) {
       // Pay down mortgage for this year (12 months)
@@ -137,12 +143,15 @@ export default function App() {
       if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
         p2Down = Math.round(phase2Price * phase2DownPct / 100);
         p2ClosingCosts = Math.round(phase2Price * (buyClosingCostPct / 100));
+        p2EmergencyFund = Math.round(phase2Price * emergencyPct / 100);
         p2Loan = phase2Price - p2Down;
         p2MonthlyPI = pmt(phase2MortRate / 100, 30, p2Loan);
         p2BaseTax = Math.round(phase2Price * phase2TaxPct / 100 / 12);
         p2BaseIns = Math.round(phase2Price * phase2InsPct / 100 / 12);
         p2Balance = p2Loan;
-        portfolioValue -= (p2Down + p2ClosingCosts);
+        const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
+        p2Underfunded = portfolioValue < p2TotalCash;
+        portfolioValue -= p2TotalCash;
       }
 
       // Pay down Phase 2 mortgage
@@ -154,49 +163,66 @@ export default function App() {
 
       // Phase 2 personal housing cost
       let curPersonalHousing = 0;
-      const curPersonalUtils = inHackPhase ? 0 : curUtils;
+      const p2YearsOut = y - hackYears - 1;
+      const p2InflFactor2 = Math.pow(1 + inflationRate / 100, p2YearsOut);
+      const curPersonalUtils = inHackPhase ? 0 : phase2Utils * p2InflFactor2;
+      let curPersonalRenterIns = 0;
       if (!inHackPhase) {
         if (phase2Mode === 'rent') {
-          curPersonalHousing = phase2Rent * Math.pow(1 + phase2RentGrowth / 100, y - hackYears - 1);
+          curPersonalHousing = phase2Rent * Math.pow(1 + phase2RentGrowth / 100, p2YearsOut);
+          curPersonalRenterIns = phase2RenterIns * p2InflFactor2;
         } else {
           // Phase 2 buy: PITI (PI fixed, tax/ins inflate)
           const p2InflFactor = Math.pow(1 + inflationRate / 100, y - hackYears - 1);
-          curPersonalHousing = p2MonthlyPI + p2BaseTax * p2InflFactor + p2BaseIns * p2InflFactor + phase2Hoa * p2InflFactor;
+          const p2HomeValue = phase2Price * Math.pow(1 + phase2App / 100, y - hackYears);
+          const p2MonthlyPMI = (p2Balance > 0.8 * p2HomeValue && phase2DownPct < 20) ? (phase2PmiRate / 100) * p2Loan / 12 : 0;
+          curPersonalHousing = p2MonthlyPI + p2BaseTax * p2InflFactor + p2BaseIns * p2InflFactor + phase2Hoa * p2InflFactor + p2MonthlyPMI;
         }
       }
 
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
-      const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils;
+      const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
       const curSurplus = curTakeHome - (curNet + curLiving);
-      portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
+      // Mid-year approximation: existing balance gets full-year return,
+      // new contributions get half-year return on average
+      portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
 
-      // Phase 2 equity
-      let p2NetEquity = 0;
+      // Phase 2 equity (hold = no selling costs, liq = with selling costs)
+      let p2HoldEquity = 0;
+      let p2LiqEquity = 0;
       if (!inHackPhase && phase2Mode === 'buy') {
         const p2HomeValue = phase2Price * Math.pow(1 + phase2App / 100, y - hackYears);
-        p2NetEquity = p2HomeValue - p2Balance - p2HomeValue * (sellingCostPct / 100);
+        p2HoldEquity = p2HomeValue - p2Balance;
+        p2LiqEquity = p2HomeValue - p2Balance - p2HomeValue * (sellingCostPct / 100);
       }
 
-      const curNE = curHomeValue - balance - curHomeValue * (sellingCostPct / 100);
-      yearlyData.push({ year: y, totalWealth: portfolioValue + curNE + p2NetEquity, portfolioValue, netEquity: curNE + p2NetEquity, principalPaid: loan - balance, appreciationGain: curHomeValue - price });
+      const curHoldEq = curHomeValue - balance;
+      const curLiqEq = curHomeValue - balance - curHomeValue * (sellingCostPct / 100);
+      const totalHoldEq = curHoldEq + p2HoldEquity;
+      const totalLiqEq = curLiqEq + p2LiqEquity;
+      yearlyData.push({ year: y, totalWealth: portfolioValue + totalHoldEq, totalWealthLiq: portfolioValue + totalLiqEq, portfolioValue, netEquity: totalHoldEq, netEquityLiq: totalLiqEq, principalPaid: loan - balance, appreciationGain: curHomeValue - price });
     }
 
     const homeValue = price * Math.pow(1 + appRate / 100, years);
     const grossEquity = homeValue - balance;
     const sellingCost = homeValue * (sellingCostPct / 100);
-    const netEquity = grossEquity - sellingCost;
+    const netEquityLiq = grossEquity - sellingCost;
+    const netEquityHold = grossEquity;
 
     // Phase 2 final values
     let p2FinalHomeValue = 0;
     let p2FinalSellingCost = 0;
-    let p2FinalNetEquity = 0;
+    let p2FinalNetEquityLiq = 0;
+    let p2FinalNetEquityHold = 0;
     if (phase2Mode === 'buy' && years > hackYears) {
       p2FinalHomeValue = phase2Price * Math.pow(1 + phase2App / 100, years - hackYears);
       p2FinalSellingCost = p2FinalHomeValue * (sellingCostPct / 100);
-      p2FinalNetEquity = p2FinalHomeValue - p2Balance - p2FinalSellingCost;
+      p2FinalNetEquityLiq = p2FinalHomeValue - p2Balance - p2FinalSellingCost;
+      p2FinalNetEquityHold = p2FinalHomeValue - p2Balance;
     }
 
-    const totalWealth = portfolioValue + netEquity + p2FinalNetEquity;
+    const totalWealth = portfolioValue + netEquityHold + p2FinalNetEquityHold;
+    const totalWealthLiq = portfolioValue + netEquityLiq + p2FinalNetEquityLiq;
 
     const principalPaid = loan - balance;
     const appreciationGain = homeValue - price;
@@ -213,18 +239,21 @@ export default function App() {
       housingPctGross,
       portfolioValue: Math.round(portfolioValue),
       grossEquity: Math.round(grossEquity), sellingCost: Math.round(sellingCost),
-      netEquity: Math.round(netEquity), totalWealth: Math.round(totalWealth),
+      netEquity: Math.round(netEquityHold), netEquityLiq: Math.round(netEquityLiq),
+      totalWealth: Math.round(totalWealth), totalWealthLiq: Math.round(totalWealthLiq),
       homeValue: Math.round(homeValue), totalRentCollected: Math.round(totalRentCollected),
       balance: Math.round(balance),
       principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
       yearlyData,
       // Phase 2 buy fields
       p2HomeValue: Math.round(p2FinalHomeValue),
-      p2NetEquity: Math.round(p2FinalNetEquity),
+      p2NetEquity: Math.round(p2FinalNetEquityHold),
+      p2NetEquityLiq: Math.round(p2FinalNetEquityLiq),
       p2Balance: Math.round(p2Balance),
       p2SellingCost: Math.round(p2FinalSellingCost),
-      p2Down, p2ClosingCosts,
-      p2CashToClose: p2Down + p2ClosingCosts,
+      p2Down, p2ClosingCosts, p2EmergencyFund,
+      p2CashToClose: p2Down + p2ClosingCosts + p2EmergencyFund,
+      p2Underfunded,
     };
   };
 
@@ -248,7 +277,7 @@ export default function App() {
       const curRenterUtils = renterUtils * inflFactor;
       const curExpenses = curRent + curRenterIns + curRenterUtils + curLiving;
       const curSurplus = curTakeHome - curExpenses;
-      portfolioValue = (portfolioValue + curSurplus * 12) * (1 + r);
+      portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
       yearlyData.push({ year: y, totalWealth: portfolioValue, portfolioValue });
     }
 
@@ -269,11 +298,12 @@ export default function App() {
       homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
       balance: 0,
       yearlyData,
-      p2HomeValue: 0, p2NetEquity: 0, p2Balance: 0, p2SellingCost: 0, p2Down: 0, p2ClosingCosts: 0, p2CashToClose: 0,
+      p2HomeValue: 0, p2NetEquity: 0, p2Balance: 0, p2SellingCost: 0, p2Down: 0, p2ClosingCosts: 0, p2EmergencyFund: 0, p2CashToClose: 0,
+      p2Underfunded: false,
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
+  const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Utils, phase2RenterIns, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
   const b = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
 
@@ -290,7 +320,7 @@ export default function App() {
       const curRenterUtils = renterUtils * inflFactor;
       const curExpenses = curRent + curRenterIns + curRenterUtils + curLiving;
       const curSurplus = curTakeHome - curExpenses;
-      pv = (pv + curSurplus * 12) * (1 + cr);
+      pv = pv * (1 + cr) + curSurplus * 12 * (1 + cr / 2);
     }
     return pv;
   };
@@ -306,10 +336,6 @@ export default function App() {
   const loserW = Math.min(...allW);
   const marginPct = loserW > 0 ? (margin / loserW * 100) : 0;
   const marginPerYear = margin / years;
-
-  // CAGR: effective annualized return on starting capital
-  const cagrA = startingCapital > 0 && years > 0 ? (Math.pow(a.totalWealth / startingCapital, 1 / years) - 1) * 100 : 0;
-  const cagrB = startingCapital > 0 && years > 0 ? (Math.pow(b.totalWealth / startingCapital, 1 / years) - 1) * 100 : 0;
 
   // Binary search: what S&P return makes the renter match the house-hack?
   const spBreakeven = useMemo(() => {
@@ -341,7 +367,7 @@ export default function App() {
       <div style={{ background: "linear-gradient(135deg, #0a1628 0%, #0d0f1a 50%, #0a1628 100%)",
         borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "24px 20px" }}>
         <div style={{ maxWidth: 1150, margin: "0 auto" }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3, color: "#fbbf24", fontFamily: "var(--mono)", marginBottom: 5 }}>HOUSE-HACK SHOWDOWN v4</div>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3, color: "#fbbf24", fontFamily: "var(--mono)", marginBottom: 5 }}>HOUSE-HACK SHOWDOWN v5</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px", color: "#fff" }}>
             House-Hack <span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 400 }}>vs.</span> Never Buy (S&P 500)
           </h1>
@@ -421,16 +447,20 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
                 <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" />
                 <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" />
+                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#fff" />
+                <Slider label="Phase 2 Renter's Insurance / Mo" value={phase2RenterIns} onChange={setPhase2RenterIns} min={0} max={50} step={5} color="#fff" />
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
                 <Slider label="Phase 2 Home Price" value={phase2Price} onChange={setPhase2Price} min={100000} max={750000} step={5000} color="#22c55e" />
                 <Slider label="Phase 2 Down Payment %" value={phase2DownPct} onChange={setPhase2DownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#22c55e" />
                 <Slider label="Phase 2 Mortgage Rate" value={phase2MortRate} onChange={setPhase2MortRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#22c55e" />
+                <Slider label="Phase 2 PMI Rate (if <20% down)" value={phase2PmiRate} onChange={setPhase2PmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" />
                 <Slider label="Phase 2 Appreciation" value={phase2App} onChange={setPhase2App} min={0} max={6} step={0.25} prefix="" suffix="%" color="#22c55e" />
                 <Slider label="Phase 2 Property Tax" value={phase2TaxPct} onChange={setPhase2TaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#22c55e" />
                 <Slider label="Phase 2 Home Insurance" value={phase2InsPct} onChange={setPhase2InsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" />
                 <Slider label="Phase 2 HOA / Mo" value={phase2Hoa} onChange={setPhase2Hoa} min={0} max={1200} step={25} color="#22c55e" />
+                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#22c55e" />
               </div>
             )}
           </div>
@@ -453,8 +483,13 @@ export default function App() {
               </span>
             </div>
             {a.underfunded && (
-              <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "var(--mono)", display: "flex", alignItems: "center", gap: 4 }}>
-                ⚠ Option A: starting capital doesn't cover cash-to-close + emergency fund ({fmt(a.leftoverCapital)} shortfall)
+              <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "var(--mono)", display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", background: "rgba(239,68,68,0.08)", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)" }}>
+                ⚠ Option A: starting capital doesn't cover cash-to-close + emergency fund ({fmt(a.leftoverCapital)} shortfall) — results assume $0 initial portfolio
+              </div>
+            )}
+            {a.p2Underfunded && phase2Mode === 'buy' && (
+              <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "var(--mono)", display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", background: "rgba(239,68,68,0.08)", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)" }}>
+                ⚠ Phase 2 buy: portfolio at year {hackYears} can't cover down + closing + reserves ({fmt(a.p2CashToClose)}) — results may be unreliable
               </div>
             )}
           </div>
@@ -501,7 +536,7 @@ export default function App() {
           display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.35)", fontFamily: "var(--mono)", marginBottom: 3 }}>
-              {years}-YEAR VERDICT (LIQUID NET WORTH)
+              {years}-YEAR VERDICT (HOLD NET WORTH)
             </div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>
               Option {winLabel}: {winName} <span style={{ color: winColor }}>wins by {fmt(margin)}</span>
@@ -510,7 +545,7 @@ export default function App() {
               {winIdx === 1
                 ? `The S&P outpaces the house-hack. Rental income doesn't overcome mortgage overhead + selling costs at these assumptions.`
                 : `The house-hack wins through leverage, rental income, and appreciation. S&P-only trails by ${fmt(margin)}.`}
-              {` Effective CAGR: house-hack `}<span style={{ color: COLORS.A }}>{cagrA.toFixed(1)}%</span>{` vs. S&P `}<span style={{ color: COLORS.B }}>{cagrB.toFixed(1)}%</span>{` on your ${fmt(startingCapital)}.`}
+              {` House-hack: ${fmt(a.totalWealth)} vs. S&P: ${fmt(b.totalWealth)}.`}
             </div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -759,23 +794,25 @@ export default function App() {
           <Row3 label="Remaining Mortgage (Property 1)" vals={[a.balance, null]} />
           <Row3 label="Principal Paid (equity earned)" vals={[a.principalPaid, null]} />
           <Row3 label="Appreciation Gain" vals={[a.appreciationGain, null]} />
+          <Row3 label="Hold Equity (Property 1)" vals={[a.grossEquity, 0]} winIdx={wHigh(a.grossEquity, 0)} highlight />
           <Row3 label={`Cost to Sell (${sellingCostPct}%)`} vals={[-a.sellingCost, 0]} winIdx={1} flipColor />
-          <Row3 label="Net Home Equity (Property 1)" vals={[a.netEquity, 0]} winIdx={wHigh(a.netEquity, 0)} highlight />
+          <Row3 label="Liquidation Equity (Property 1)" vals={[a.netEquityLiq, 0]} winIdx={wHigh(a.netEquityLiq, 0)} />
           {phase2Mode === 'buy' && years > hackYears && (
             <>
               <Row3 label="PHASE 2 PROPERTY" section />
               <Row3 label="Phase 2 Home Value" vals={[a.p2HomeValue, null]} />
               <Row3 label="Phase 2 Remaining Mortgage" vals={[a.p2Balance, null]} />
+              <Row3 label="Phase 2 Hold Equity" vals={[a.p2NetEquity, 0]} winIdx={wHigh(a.p2NetEquity, 0)} highlight />
               <Row3 label={`Phase 2 Cost to Sell (${sellingCostPct}%)`} vals={[-a.p2SellingCost, 0]} winIdx={1} flipColor />
-              <Row3 label="Phase 2 Net Equity" vals={[a.p2NetEquity, 0]} winIdx={wHigh(a.p2NetEquity, 0)} highlight />
-              <Row3 label="Combined Property Equity" vals={[a.netEquity + a.p2NetEquity, 0]} winIdx={wHigh(a.netEquity + a.p2NetEquity, 0)} highlight />
+              <Row3 label="Phase 2 Liquidation Equity" vals={[a.p2NetEquityLiq, 0]} winIdx={wHigh(a.p2NetEquityLiq, 0)} />
+              <Row3 label="Combined Hold Equity" vals={[a.netEquity + a.p2NetEquity, 0]} winIdx={wHigh(a.netEquity + a.p2NetEquity, 0)} highlight />
             </>
           )}
           <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
           <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
-          <Row3 label="LIQUID NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
-          <Row3 label="Effective CAGR" vals={[cagrA, cagrB]} fmtFn={v => v.toFixed(1) + "%"} winIdx={wHigh(cagrA, cagrB)} highlight />
+          <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
+          <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", padding: "10px 12px",
             background: `${BGS[winLabel]}0.05)`, borderTop: `2px solid ${BGS[winLabel]}0.2)` }}>
@@ -811,8 +848,8 @@ export default function App() {
               </div>
             )}
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
-              <strong style={{ color: "#fff" }}>Selling costs are the house-hack's tax.</strong> At {sellingCostPct}%, selling a {fmt(a.homeValue)} home costs {fmt(a.sellingCost)}.
-              The renter pays $0 to exit. {sellingCostPct >= 6 ? "Try reducing selling costs to 5% (discount broker) to see how it shifts the outcome." : ""}
+              <strong style={{ color: "#fff" }}>Hold vs. liquidation.</strong> The primary comparison uses hold equity (no selling costs) since the strategy is long-term hold.
+              If you sold everything, {sellingCostPct}% selling costs would reduce property equity by {fmt(a.sellingCost + a.p2SellingCost)}, bringing net worth to {fmt(a.totalWealthLiq)}.
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
               <strong style={{ color: "#fff" }}>Stress test:</strong> Set rental income to $0, appreciation to 2%, and investment return to 10%.
@@ -844,7 +881,7 @@ export default function App() {
 
         <div style={{ marginTop: 14, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.03)",
           fontSize: 7, color: "rgba(255,255,255,0.1)", fontFamily: "var(--mono)", textAlign: "center" }}>
-          HOUSE-HACK SHOWDOWN v4 · {hackYears >= years ? "house-hack" : hackYears === 0 ? "investment" : "hybrid"} · phase 2: {phase2Mode} · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
+          HOUSE-HACK SHOWDOWN v5 · {hackYears >= years ? "house-hack" : hackYears === 0 ? "investment" : "hybrid"} · phase 2: {phase2Mode} · 3% raise · {inflationRate}% inflation · {maintVacancyPct}% vacancy · {sellingCostPct}% sell cost · {investRet}% S&P · 30yr fixed
         </div>
       </div>
     </div>
