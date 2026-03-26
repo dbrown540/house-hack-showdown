@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-House-Hack Showdown v3.1 — a single-page React financial comparison tool that models long-term wealth outcomes across three strategies: Buy Cheap (house-hack), Buy Better (premium property), and Never Buy (rent + S&P 500 investing).
+House-Hack Showdown v5 — a single-page React financial comparison tool that models long-term wealth outcomes for House-Hack vs. Never Buy (rent + S&P 500 investing).
 
 ## Commands
 
@@ -45,3 +45,7 @@ Supporting files:
 - `calcBuy`/`calcNeverBuy` are the source of truth for financial modeling — when modifying, ensure Verdict, Insights, and "What Flips" sections stay logically consistent
 - Income growth is hardcoded at 3% annually (`Math.pow(1.03, y-1)`) in both calc functions — not tied to the `inflationRate` slider
 - Both calc functions return the same object shape so `Row3` can display any option uniformly
+
+## Batch Processing
+
+See `scripts/SKILLS.md` for running comparisons without the UI via `node scripts/compare.cjs`. The CLI engine is a standalone copy of the calc logic (not imported by the UI) — keep them in sync when formulas change.

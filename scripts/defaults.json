@@ -1,0 +1,50 @@
+{
+  "startingCapital": 50000,
+  "takeHome": 2600,
+  "weeklyCost": 75,
+
+  "downPct": 3,
+  "rate": 5.875,
+  "taxPct": 1.21,
+  "insPct": 0.5,
+  "pmiRate": 0.5,
+  "buyClosingCostPct": 3,
+
+  "utilities": 500,
+  "hoa": 0,
+  "maintVacancyPct": 5,
+  "emergencyPct": 1,
+  "sellingCostPct": 5,
+
+  "inflationRate": 3.0,
+  "investRet": 10,
+  "hackYears": 2,
+  "years": 10,
+  "tenantPaysUtils": true,
+
+  "pA": 300000,
+  "rA": 1000,
+  "fullRentA": 2400,
+  "repA": 0,
+  "appA": 2.5,
+  "rgA": 2,
+
+  "phase2Mode": "rent",
+  "phase2Utils": 300,
+  "phase2Rent": 1000,
+  "phase2RentGrowth": 3,
+  "phase2RenterIns": 15,
+  "phase2Price": 350000,
+  "phase2DownPct": 5,
+  "phase2MortRate": 5.875,
+  "phase2PmiRate": 0.5,
+  "phase2App": 3,
+  "phase2TaxPct": 1.21,
+  "phase2InsPct": 0.5,
+  "phase2Hoa": 0,
+
+  "monthlyRent": 1000,
+  "rentInflation": 3,
+  "renterIns": 15,
+  "renterUtils": 300
+}

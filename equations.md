@@ -83,7 +83,7 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 ## 3) Core helper equations (`src/utils/math.js`)
 - Mortgage payment:
   - `pmt(rate, nper, pv)` where `rate` is annual decimal and `nper` is years.
-  - If `rate = 0`: `pv / (nper * 12)`
+  - If `rate = 0`: `pv / nper` (**Note:** this returns an annual amount, not monthly — edge-case bug when rate = 0)
   - Else with `r_m = rate / 12`, `n = nper * 12`:
   - `payment = pv * (r_m * (1 + r_m)^n) / ((1 + r_m)^n - 1)`
 - Required monthly rent to close wealth gap:
@@ -117,8 +117,9 @@ This file documents the calculator variables and equations used in `src/App.jsx`
   - `yr0LiqEq = down - price * sellingCostPct / 100`
 
 ### Year loop (`y = 1..years`)
-- Property 1 amortization monthly update (12x):
+- Property 1 amortization monthly update (12x), then clamp:
   - `balance = balance * (1 + monthlyR) - monthlyPI`, with `monthlyR = rate / 100 / 12`
+  - `balance = max(balance, 0)`
 - Phase choice:
   - `inHackPhase = (y <= hackYears)`
 - Inflation factor:
@@ -162,8 +163,9 @@ This file documents the calculator variables and equations used in `src/App.jsx`
     - `p2Underfunded = portfolioValue < p2TotalCash`
     - `portfolioValue -= p2TotalCash`
   - `curPersonalRenterIns = 0` (owner, not renter)
-  - Amortization each year:
+  - Amortization each year (then clamp):
     - `p2Balance = p2Balance * (1 + p2MonthlyR) - p2MonthlyPI` (12x), `p2MonthlyR = phase2MortRate / 100 / 12`
+    - `p2Balance = max(p2Balance, 0)`
   - Year cost:
     - `p2HomeValue = phase2Price * (1 + phase2App / 100)^(y - hackYears)`
     - `p2MonthlyPMI = (p2Balance > 0.8 * p2HomeValue && phase2DownPct < 20) ? (phase2PmiRate / 100) * p2Loan / 12 : 0`
@@ -233,6 +235,7 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 | `p2NetEquity` | Phase 2 Hold Equity | A only (if phase2Mode=buy) |
 | `p2SellingCost` | Phase 2 Cost to Sell (X%) | A only (if phase2Mode=buy) |
 | `p2NetEquityLiq` | Phase 2 Liquidation Equity | A only (if phase2Mode=buy) |
+| `p2CashToClose` | Phase 2 Cash to Close | A only (if phase2Mode=buy) |
 | `netEquity + p2NetEquity` | Combined Hold Equity | A only (if phase2Mode=buy) |
 | `totalRentCollected` | Total Rent Collected | A only |
 | `totalRentPaid` | Total Rent Paid | B only |
@@ -241,12 +244,17 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 | `totalWealthLiq` | LIQUIDATION NET WORTH | A and B (secondary) |
 
 ## 5) Option B equations (`calcNeverBuy`)
-- Year 1:
+- `portfolioValue` starts at `startingCapital`
+- Year 1 snapshot:
+  - `netHousing = round(monthlyRent + renterIns + renterUtils)`
+  - `totalExpenses = round(monthlyRent + renterIns + renterUtils + livingMonthly)`
   - `year1Expenses = monthlyRent + renterIns + renterUtils + livingMonthly`
   - `surplus0 = monthlyIncome - year1Expenses`
-- For each year:
+- For each year (`y = 1..years`):
   - `inflFactor = (1 + inflationRate / 100)^(y - 1)`
   - `curRent = monthlyRent * (1 + rentInflation / 100)^(y - 1)`
+  - `totalRentPaid += curRent * 12`
+  - `curTakeHome = monthlyIncome * (1.03)^(y - 1)`
   - `curRenterIns = renterIns * inflFactor`
   - `curRenterUtils = renterUtils * inflFactor`
   - `curLiving = livingMonthly * inflFactor`
