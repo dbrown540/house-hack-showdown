@@ -9,8 +9,9 @@
 
 // ── HELPERS ──
 
+// Keep in sync with src/utils/math.js
 function pmt(rate, nper, pv) {
-  if (rate === 0) return pv / nper;
+  if (rate === 0) return pv / (nper * 12); // returns monthly payment; nper is in years
   const r = rate / 12;
   const n = nper * 12;
   return pv * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
