@@ -397,39 +397,39 @@ export default function App() {
           {/* Personal Finance */}
           <div style={groupLabelStyle}>PERSONAL FINANCE</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-            <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={5000} max={300000} step={1000} color="#fff" />
-            <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={8000} step={50} color="#fff" />
-            <Slider label="Groceries + Gas / Wk" value={weeklyCost} onChange={setWeeklyCost} min={50} max={200} step={5} color="#fff" />
+            <Slider label="Starting Capital" value={startingCapital} onChange={setStartingCapital} min={5000} max={300000} step={1000} color="#fff" tooltip="Your liquid savings on day one. Used to fund the down payment, closing costs, and any upfront repairs. Any leftover amount starts your investment portfolio." />
+            <Slider label="Take-Home / Check" value={takeHome} onChange={setTakeHome} min={1500} max={8000} step={50} color="#fff" tooltip="Your net monthly paycheck after taxes and deductions. Monthly surpluses and deficits are calculated relative to this income." />
+            <Slider label="Groceries + Gas / Wk" value={weeklyCost} onChange={setWeeklyCost} min={50} max={200} step={5} color="#fff" tooltip="Average weekly spending on food and fuel. Multiplied by 52/12 to get a monthly figure used in both scenarios." />
           </div>
 
           {/* Mortgage Terms */}
           <div style={groupLabelStyle}>MORTGAGE TERMS (PROPERTY 1)</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-            <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" />
-            <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" />
-            <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
-            <Slider label="PMI Rate (if <20% down)" value={pmiRate} onChange={setPmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" />
-            <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" />
+            <Slider label="Down Payment %" value={downPct} onChange={setDownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Percentage of the home price paid upfront in cash. Below 20% triggers PMI. Higher down payments reduce monthly payments but tie up more capital." />
+            <Slider label="Mortgage Rate" value={rate} onChange={setRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#fff" tooltip="Annual interest rate on a 30-year fixed mortgage. Directly drives the monthly principal + interest payment." />
+            <Slider label="Property Tax" value={taxPct} onChange={setTaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#fff" tooltip="Annual property tax as a percentage of home value, paid monthly via escrow. Rates vary widely by county — check your local assessor." />
+            <Slider label="Home Insurance %" value={insPct} onChange={setInsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" tooltip="Annual homeowners insurance premium as a percentage of home value, paid via escrow. Typically 0.5–1.0% depending on location and coverage." />
+            <Slider label="PMI Rate (if <20% down)" value={pmiRate} onChange={setPmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#fff" tooltip="Private Mortgage Insurance required when down payment is under 20%. Added to monthly payment and automatically drops once equity reaches 20% of original value." />
+            <Slider label="Buy Closing Costs" value={buyClosingCostPct} onChange={setBuyClosingCostPct} min={0} max={6} step={0.1} prefix="" suffix="%" color="#fff" tooltip="Lender fees, title insurance, escrow, and prepaids paid at purchase. Typically 2–5% of the purchase price, paid from starting capital." />
           </div>
 
           {/* Property Costs */}
           <div style={groupLabelStyle}>PROPERTY COSTS</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-            <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" />
-            <Slider label="HOA / Mo (Property 1)" value={hoa} onChange={setHoa} min={0} max={1200} step={25} color="#fff" />
-            <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" />
-            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" />
+            <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" tooltip="Monthly water, gas, trash, and shared-area utility costs for the property. May be split with your tenant if they pay utilities." />
+            <Slider label="HOA / Mo (Property 1)" value={hoa} onChange={setHoa} min={0} max={1200} step={25} color="#fff" tooltip="Monthly homeowners association fee, if applicable. Covers shared amenities and common-area maintenance. Set to $0 if no HOA." />
+            <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" tooltip="Percentage of rental income set aside monthly for repairs, maintenance, and vacant months between tenants. A common landlord rule of thumb is 8–12%." />
+            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Cash reserve held outside your portfolio for major unexpected repairs (roof, HVAC, etc.). Funded from starting capital at purchase and not invested." />
+            <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Agent commissions and closing costs when you eventually sell the property. Deducted from final sale proceeds when calculating terminal wealth." />
           </div>
 
           {/* Market & Timing */}
           <div style={groupLabelStyle}>MARKET & TIMING</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-            <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" />
-            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" />
-            <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" />
+            <Slider label="General Inflation" value={inflationRate} onChange={setInflationRate} min={0} max={8} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Annual rate at which prices rise. Used to inflate ongoing costs like utilities and insurance over time. Does not affect income growth, which is hardcoded at 3%/yr." />
+            <Slider label="Investment Return" value={investRet} onChange={setInvestRet} min={4} max={12} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Annual return on money invested in the stock market (e.g., an S&P 500 index fund). Applied to portfolio surpluses each year. The S&P 500 has historically averaged ~10% nominal." />
+            <Slider label="House-Hack Years" value={hackYears} onChange={setHackYears} min={0} max={10} step={1} prefix="" suffix=" yrs" color="#fff" tooltip="How many years you live in the property and collect partial rent. After this period (Phase 2), you move out and collect full rent or buy a second home." />
+            <Slider label="Projection Years" value={years} onChange={setYears} min={5} max={40} step={1} prefix="" suffix=" yrs" color="#fff" tooltip="Total length of the wealth comparison. Both options are compared at this point in time. Longer horizons tend to favor real estate equity; shorter ones may favor liquidity." />
           </div>
 
           {/* Phase 2 Housing */}
@@ -455,22 +455,22 @@ export default function App() {
             </div>
             {phase2Mode === "rent" ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-                <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" />
-                <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" />
-                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#fff" />
-                <Slider label="Phase 2 Renter's Insurance / Mo" value={phase2RenterIns} onChange={setPhase2RenterIns} min={0} max={50} step={5} color="#fff" />
+                <Slider label="Phase 2 Personal Rent" value={phase2Rent} onChange={setPhase2Rent} min={0} max={3000} step={50} color="#fff" tooltip="The monthly rent you pay for your own housing after moving out of the house-hack property in Phase 2." />
+                <Slider label="Phase 2 Rent Growth" value={phase2RentGrowth} onChange={setPhase2RentGrowth} min={0} max={6} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Annual rate at which your personal rent increases during Phase 2." />
+                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#fff" tooltip="Your personal monthly utility costs at your Phase 2 rental." />
+                <Slider label="Phase 2 Renter's Insurance / Mo" value={phase2RenterIns} onChange={setPhase2RenterIns} min={0} max={50} step={5} color="#fff" tooltip="Monthly cost of renter's insurance for your Phase 2 rental. Typically $15–30/mo." />
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0 20px" }}>
-                <Slider label="Phase 2 Home Price" value={phase2Price} onChange={setPhase2Price} min={100000} max={750000} step={5000} color="#22c55e" />
-                <Slider label="Phase 2 Down Payment %" value={phase2DownPct} onChange={setPhase2DownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 Mortgage Rate" value={phase2MortRate} onChange={setPhase2MortRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 PMI Rate (if <20% down)" value={phase2PmiRate} onChange={setPhase2PmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 Appreciation" value={phase2App} onChange={setPhase2App} min={0} max={6} step={0.25} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 Property Tax" value={phase2TaxPct} onChange={setPhase2TaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 Home Insurance" value={phase2InsPct} onChange={setPhase2InsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" />
-                <Slider label="Phase 2 HOA / Mo" value={phase2Hoa} onChange={setPhase2Hoa} min={0} max={1200} step={25} color="#22c55e" />
-                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#22c55e" />
+                <Slider label="Phase 2 Home Price" value={phase2Price} onChange={setPhase2Price} min={100000} max={750000} step={5000} color="#22c55e" tooltip="Purchase price of the second home you buy after moving out of your house-hack property." />
+                <Slider label="Phase 2 Down Payment %" value={phase2DownPct} onChange={setPhase2DownPct} min={0} max={20} step={0.5} prefix="" suffix="%" color="#22c55e" tooltip="Down payment percentage for your Phase 2 home purchase, funded from the portfolio built during Phase 1." />
+                <Slider label="Phase 2 Mortgage Rate" value={phase2MortRate} onChange={setPhase2MortRate} min={4} max={8} step={0.125} prefix="" suffix="%" color="#22c55e" tooltip="Interest rate on the 30-year mortgage for your Phase 2 home purchase." />
+                <Slider label="Phase 2 PMI Rate (if <20% down)" value={phase2PmiRate} onChange={setPhase2PmiRate} min={0} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" tooltip="PMI rate for the Phase 2 home if the down payment is under 20%. Drops automatically once equity reaches 20%." />
+                <Slider label="Phase 2 Appreciation" value={phase2App} onChange={setPhase2App} min={0} max={6} step={0.25} prefix="" suffix="%" color="#22c55e" tooltip="Expected annual home price appreciation rate for the Phase 2 property." />
+                <Slider label="Phase 2 Property Tax" value={phase2TaxPct} onChange={setPhase2TaxPct} min={0.5} max={2} step={0.01} prefix="" suffix="%" color="#22c55e" tooltip="Annual property tax rate for your Phase 2 home, as a percentage of its value." />
+                <Slider label="Phase 2 Home Insurance" value={phase2InsPct} onChange={setPhase2InsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" tooltip="Annual homeowners insurance premium for the Phase 2 home, as a percentage of its value." />
+                <Slider label="Phase 2 HOA / Mo" value={phase2Hoa} onChange={setPhase2Hoa} min={0} max={1200} step={25} color="#22c55e" tooltip="Monthly HOA fee for your Phase 2 home, if applicable. Set to $0 if none." />
+                <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#22c55e" tooltip="Your personal monthly utility costs for the Phase 2 home you own." />
               </div>
             )}
           </div>
@@ -514,12 +514,12 @@ export default function App() {
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.A }} />
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.A, fontFamily: "var(--mono)" }}>A: HOUSE-HACK</span>
             </div>
-            <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} />
-            <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} />
-            <Slider label="Full Rent / Mo (after move-out)" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} />
-            <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} />
-            <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} />
-            <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} />
+            <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} tooltip="Purchase price of the house-hack property. Drives the mortgage payment, property taxes, and insurance." />
+            <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} tooltip="Monthly rent collected from your tenant(s) while you live in the property during the house-hack phase." />
+            <Slider label="Full Rent / Mo (after move-out)" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} tooltip="Total monthly rent collected from all units once you move out and rent the whole property. Should be equal to or higher than the house-hack rent." />
+            <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} tooltip="One-time renovation or repair costs paid at purchase, drawn from starting capital before calculating your initial portfolio." />
+            <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} tooltip="Expected annual home price growth for this property. Increases equity and terminal sale value." />
+            <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} tooltip="Annual rate at which rental income grows over the projection period, reflecting lease renewals and market increases." />
             <Slider label="Tax Benefit (Depreciation)" value={taxBenefitPctA} onChange={setTaxBenefitPctA} min={0} max={1.5} step={0.1} prefix="" suffix="% of property value per year (tax savings)" color={COLORS.A} tooltip="Rental properties can deduct annual depreciation (~1/27.5 of the building value, based on original purchase price, not current value) from taxable income, sheltering rental income from taxes. This slider adds the equivalent annual savings to Option A's cash flow. 0% = no tax effect (default). 0.5% ≈ typical landlord in the 22–24% tax bracket. 1.0% ≈ higher bracket or high building-value ratio. Applied to all years as a simplification (no proration for the house-hack phase). Does NOT model: mortgage interest deduction, passive loss rules, depreciation recapture on sale, or state taxes." />
           </div>
           {/* B */}
@@ -529,10 +529,10 @@ export default function App() {
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.B }} />
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: COLORS.B, fontFamily: "var(--mono)" }}>B: NEVER BUY (S&P)</span>
             </div>
-            <Slider label="Monthly Rent" value={monthlyRent} onChange={setMonthlyRent} min={500} max={2500} step={50} color={COLORS.B} />
-            <Slider label="Rent Inflation / Yr" value={rentInflation} onChange={setRentInflation} min={0} max={6} step={0.5} prefix="" suffix="%" color={COLORS.B} />
-            <Slider label="Renter's Insurance / Mo" value={renterIns} onChange={setRenterIns} min={10} max={50} step={5} color={COLORS.B} />
-            <Slider label="Utilities / Mo" value={renterUtils} onChange={setRenterUtils} min={0} max={1200} step={25} color={COLORS.B} />
+            <Slider label="Monthly Rent" value={monthlyRent} onChange={setMonthlyRent} min={500} max={2500} step={50} color={COLORS.B} tooltip="Starting monthly rent payment in the Never-Buy scenario. Option B invests the down payment in the S&P 500 instead of using it for a home purchase." />
+            <Slider label="Rent Inflation / Yr" value={rentInflation} onChange={setRentInflation} min={0} max={6} step={0.5} prefix="" suffix="%" color={COLORS.B} tooltip="Annual rate at which rent increases in Option B. Compounding rent growth is a key long-term cost drag compared to a fixed mortgage payment." />
+            <Slider label="Renter's Insurance / Mo" value={renterIns} onChange={setRenterIns} min={10} max={50} step={5} color={COLORS.B} tooltip="Monthly cost of renter's insurance. Covers personal belongings and liability. Typically $15–30/mo." />
+            <Slider label="Utilities / Mo" value={renterUtils} onChange={setRenterUtils} min={0} max={1200} step={25} color={COLORS.B} tooltip="Monthly utility costs as a renter. Any monthly surplus after rent, utilities, and insurance is invested in the S&P 500." />
             <div style={{ marginTop: 10, padding: "8px 0", borderTop: `1px solid ${BGS.B}0.1)` }}>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>All {fmt(startingCapital)} invested in S&P on day 1</div>
               <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>No property tax, no maintenance, no selling costs</div>
