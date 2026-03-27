@@ -100,7 +100,11 @@ export default function App() {
     let totalRentCollected = 0;
     const monthlyR = rate / 100 / 12;
     let balance = loan;
-    // Depreciation tax benefit: fixed annual cash flow based on purchase price
+    // Depreciation tax benefit: fixed annual cash flow based on purchase price.
+    // Applied to all years including the hack phase (intentional simplification —
+    // prorating by owner-occupancy fraction adds complexity for a small effect:
+    // ~$3K overstatement per hack year at 1.0% on $300K, compounding to ~$3-4K
+    // over 10 years, within the model's existing approximation envelope).
     const annualTaxBenefit = price * (taxBenefitPctA / 100);
 
     // Phase 2 buy tracking
@@ -516,7 +520,7 @@ export default function App() {
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} />
-            <Slider label="Tax Benefit (Depreciation)" value={taxBenefitPctA} onChange={setTaxBenefitPctA} min={0} max={1.5} step={0.1} prefix="" suffix="% of property value per year (tax savings)" color={COLORS.A} tooltip="Rental properties can deduct annual depreciation (~1/27.5 of the building value, based on original purchase price, not current value) from taxable income, sheltering rental income from taxes. This slider adds the equivalent annual savings to Option A's cash flow. 0% = no tax effect (default). 0.5% ≈ typical landlord in the 22–24% tax bracket. 1.0% ≈ higher bracket or high building-value ratio. Does NOT model: mortgage interest deduction, passive loss rules, depreciation recapture on sale, or state taxes." />
+            <Slider label="Tax Benefit (Depreciation)" value={taxBenefitPctA} onChange={setTaxBenefitPctA} min={0} max={1.5} step={0.1} prefix="" suffix="% of property value per year (tax savings)" color={COLORS.A} tooltip="Rental properties can deduct annual depreciation (~1/27.5 of the building value, based on original purchase price, not current value) from taxable income, sheltering rental income from taxes. This slider adds the equivalent annual savings to Option A's cash flow. 0% = no tax effect (default). 0.5% ≈ typical landlord in the 22–24% tax bracket. 1.0% ≈ higher bracket or high building-value ratio. Applied to all years as a simplification (no proration for the house-hack phase). Does NOT model: mortgage interest deduction, passive loss rules, depreciation recapture on sale, or state taxes." />
           </div>
           {/* B */}
           <div style={{ background: `linear-gradient(180deg, ${BGS.B}0.04) 0%, ${BGS.B}0.01) 100%)`,
@@ -817,7 +821,7 @@ export default function App() {
           )}
           <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
           <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
-          {taxBenefitPctA > 0 && <Row3 label="Tax Savings (Depreciation)" vals={[a.annualTaxBenefit, 0]} winIdx={wHigh(a.annualTaxBenefit, 0)} />}
+          {a.annualTaxBenefit > 0 && <Row3 label="Tax Savings (Depreciation) / yr" vals={[a.annualTaxBenefit, 0]} winIdx={wHigh(a.annualTaxBenefit, 0)} />}
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
           <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
           <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} />
@@ -860,6 +864,12 @@ export default function App() {
                 at {phase2App}% appreciation — turning a housing expense into a wealth-building asset.
               </div>
             )}
+            {taxBenefitPctA > 0 && (
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+                <strong style={{ color: "#fff" }}>Tax savings from depreciation.</strong> At {taxBenefitPctA}% of the {fmt(pA)} purchase price, Option A generates {fmt(a.annualTaxBenefit)}/yr in estimated tax savings.
+                That cash flow compounds into the investment portfolio each year, contributing to Option A's wealth advantage. This is an approximation — actual savings depend on your tax bracket, building-to-land ratio, and tax situation.
+              </div>
+            )}
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
               <strong style={{ color: "#fff" }}>Hold vs. liquidation.</strong> The primary comparison uses hold equity (no selling costs) since the strategy is long-term hold.
               If you sold everything, {sellingCostPct}% selling costs would reduce property equity by {fmt(a.sellingCost + a.p2SellingCost)}, bringing net worth to {fmt(a.totalWealthLiq)}.
@@ -881,6 +891,7 @@ export default function App() {
                 The S&P path would need roughly <strong style={{ color: COLORS.B }}>{spBreakeven.toFixed(1)}% annual returns</strong> to
                 match the house-hack at current assumptions. Or rental income would need to drop to <strong style={{ color: COLORS.B }}>{fmt(Math.max(0, Math.round(rA - calcRequiredMonthlyRent(a.totalWealth - b.totalWealth, years, investRet))))}</strong>/mo
                 for the market to win. The house-hack's edge is tenants + leverage — erode either and the S&P catches up.
+                {taxBenefitPctA > 0 && <> Setting the tax benefit slider to 0% would remove {fmt(a.annualTaxBenefit)}/yr from Option A's compounding, narrowing the gap.</>}
               </>
             ) : (
               <>

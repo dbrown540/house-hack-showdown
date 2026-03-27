@@ -401,12 +401,12 @@ test('compare() calcBuy results are self-consistent: totalWealth = portfolioValu
 
 console.log('\n─── 9. Depreciation tax benefit ───');
 
-test('taxBenefitPct=0: annualTaxBenefit=0, totalWealth matches baseline', () => {
-  const base = compare(defaults).houseHack;
+test('taxBenefitPct=0: annualTaxBenefit=0, no uplift vs taxBenefitPct=0.1', () => {
   const withZero = compare({ ...defaults, taxBenefitPct: 0 }).houseHack;
-  assert.strictEqual(withZero.annualTaxBenefit, 0, 'annualTaxBenefit should be 0');
-  assert.strictEqual(withZero.totalWealth, base.totalWealth,
-    `totalWealth should be unchanged vs baseline: ${base.totalWealth} vs ${withZero.totalWealth}`);
+  const withSmall = compare({ ...defaults, taxBenefitPct: 0.1 }).houseHack;
+  assert.strictEqual(withZero.annualTaxBenefit, 0, 'annualTaxBenefit should be 0 when taxBenefitPct=0');
+  assert.ok(withSmall.totalWealth > withZero.totalWealth,
+    `taxBenefitPct=0.1 should produce higher totalWealth than 0: got ${withSmall.totalWealth} vs ${withZero.totalWealth}`);
 });
 
 test('taxBenefitPct=0.5, price=300000: annualTaxBenefit=$1,500', () => {
@@ -449,6 +449,15 @@ test('defensive guard: taxBenefitPct=undefined treated as 0', () => {
   const withZero = compare({ ...defaults, taxBenefitPct: 0 }).houseHack;
   assert.strictEqual(withUndefined.annualTaxBenefit, withZero.annualTaxBenefit,
     'undefined taxBenefitPct should behave same as 0');
+});
+
+test('defensive guard: negative taxBenefitPct clamped to 0', () => {
+  const withNeg = compare({ ...defaults, taxBenefitPct: -0.5 }).houseHack;
+  const withZero = compare({ ...defaults, taxBenefitPct: 0 }).houseHack;
+  assert.strictEqual(withNeg.annualTaxBenefit, 0,
+    'negative taxBenefitPct should produce annualTaxBenefit=0');
+  assert.strictEqual(withNeg.totalWealth, withZero.totalWealth,
+    'negative taxBenefitPct should not reduce totalWealth below taxBenefitPct=0');
 });
 
 // ── SUMMARY ───────────────────────────────────────────────────────────────────

@@ -77,6 +77,7 @@ Any variable not provided uses the default from `scripts/defaults.json`. Pass on
 | `repA` | 0 | 0–50,000 | Upfront repairs |
 | `appA` | 2.5 | 0–6 | Annual appreciation % |
 | `rgA` | 2 | 0–5 | Annual rent growth % |
+| `taxBenefitPct` | 0 | 0–1.5 | Annual depreciation tax savings as % of purchase price (0 = no tax effect; 0.5 ≈ typical 22–24% bracket) |
 
 ### Phase 2 Personal Housing
 
@@ -132,6 +133,7 @@ Any variable not provided uses the default from `scripts/defaults.json`. Pass on
       "leftoverCapital": 29000,
       "underfunded": false,
       "totalRentCollected": 245000,
+      "annualTaxBenefit": 0,
       "p2NetEquity": 0,
       "p2Underfunded": false,
       "roi": { "totalGain": 875848, "totalROI": 1751.7, "annualizedROI": 33.8, "wealthMultiple": 18.52 },
