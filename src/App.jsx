@@ -293,7 +293,7 @@ export default function App() {
       surplus: Math.round(surplus0), surplusChk: Math.round(surplus0 / 2),
       housingPctGross: housingPct,
       portfolioValue: Math.round(portfolioValue),
-      grossEquity: 0, sellingCost: 0, netEquity: 0,
+      grossEquity: 0, sellingCost: 0, netEquity: 0, netEquityLiq: 0,
       totalWealth: Math.round(portfolioValue),
       homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
       balance: 0,
