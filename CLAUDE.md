@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-House-Hack Showdown v5 — a single-page React financial comparison tool that models long-term wealth outcomes for House-Hack vs. Never Buy (rent + S&P 500 investing).
+House-Hack Showdown v5 — a single-page React financial comparison tool that models long-term wealth outcomes for House-Hack (Option A) vs. Never Buy / rent + S&P 500 investing (Option B).
 
 ## Commands
 
@@ -23,20 +23,20 @@ Pushes to `main` auto-deploy to GitHub Pages via `.github/workflows/deploy.yml` 
 ## Architecture
 
 All app logic lives in a single component (`src/App.jsx`):
-- **28 `useState` hooks** manage all inputs (shared assumptions + per-option sliders)
+- **~42 `useState` hooks** manage all inputs (shared assumptions + per-option sliders)
 - **`calcBuy(price, rent, fullRent, repairs, appRate, rentGrowth)`** — year-by-year financial model for buy scenarios with two phases:
   - **Phase 1 (house-hack)**: owner lives in property, collects partial rent; length controlled by `hackYears`
-  - **Phase 2**: owner moves out, collects full rent (`fullRent`), pays personal rent elsewhere (`phase2Rent`)
-  - Models mortgage PITI, inflation, vacancy/maintenance reserves, appreciation, selling costs, and investment compounding on surpluses
+  - **Phase 2**: owner moves out, collects full rent (`fullRent`), pays personal rent elsewhere or buys a second home (controlled by `phase2Mode`: `"rent"` or `"buy"`)
+  - Models mortgage PITI, inflation, vacancy/maintenance reserves, appreciation, selling costs, PMI auto-drop, and investment compounding on surpluses
 - **`calcNeverBuy()`** — renter + S&P model using closure over shared state
-- **`useMemo`** caches results for Options A, B, C; a winner is determined by comparing `totalWealth`
-- **`wHigh` / `wLow`** — helpers that return the index (0/1/2) of the best value for a row, used by `Row3` for winner highlighting
+- **`useMemo`** caches results for Options A and B; winner is determined by comparing `totalWealth`
+- **`wHigh` / `wLow`** — helpers that return the index (0 or 1) of the best value for a row, used by `Row3` for winner highlighting
 
 Supporting files:
 - `src/utils/math.js` — `pmt()` (mortgage payment), `calcRequiredMonthlyRent()`, `fmt()` (currency formatting — always use this for dollar display)
-- `src/utils/constants.js` — color palette (`COLORS.A/B/C`) and background helpers
+- `src/utils/constants.js` — color palette (`COLORS.A/B`) and background helpers
 - `src/components/Slider.jsx` — reusable range input
-- `src/components/Row3.jsx` — three-column comparison row with winner highlighting
+- `src/components/Row3.jsx` — three-column layout (label + 2 option values) with winner highlighting
 
 ## Conventions
 
@@ -48,4 +48,4 @@ Supporting files:
 
 ## Batch Processing
 
-See `scripts/SKILLS.md` for running comparisons without the UI via `node scripts/compare.cjs`. The CLI engine is a standalone copy of the calc logic (not imported by the UI) — keep them in sync when formulas change.
+See `scripts/SKILLS.md` for running comparisons without the UI via `node scripts/compare.cjs`. The CLI engine (`scripts/engine.cjs`) is a standalone copy of the calc logic (not imported by the UI) — keep them in sync when formulas change. The CLI engine takes a flat params object while the UI calc functions use closures over React state.

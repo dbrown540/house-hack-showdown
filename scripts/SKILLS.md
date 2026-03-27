@@ -133,13 +133,16 @@ Any variable not provided uses the default from `scripts/defaults.json`. Pass on
       "underfunded": false,
       "totalRentCollected": 245000,
       "p2NetEquity": 0,
-      "p2Underfunded": false
+      "p2Underfunded": false,
+      "roi": { "totalGain": 875848, "totalROI": 1751.7, "annualizedROI": 33.8, "wealthMultiple": 18.52 },
+      "roiLiq": { "totalGain": 856247, "totalROI": 1712.5, "annualizedROI": 33.5, "wealthMultiple": 18.12 }
     },
     "neverBuy": {
       "totalWealth": 830576,
       "portfolioValue": 830576,
       "surplus": 2100,
-      "totalRentPaid": 137567
+      "totalRentPaid": 137567,
+      "roi": { "totalGain": 780576, "totalROI": 1561.2, "annualizedROI": 32.0, "wealthMultiple": 16.61 }
     }
   }
 }

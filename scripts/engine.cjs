@@ -337,6 +337,22 @@ function compare(params) {
     spBreakeven = (lo + hi) / 2;
   }
 
+  // ROI stats helper
+  function roiStats(finalWealth, initial, years) {
+    const totalGain = finalWealth - initial;
+    const totalROI = initial > 0 ? (totalGain / initial * 100) : 0;
+    const cagr = initial > 0 ? ((Math.pow(finalWealth / initial, 1 / years) - 1) * 100) : 0;
+    const wealthMultiple = initial > 0 ? finalWealth / initial : 0;
+    return {
+      totalGain: Math.round(totalGain),
+      totalROI: Math.round(totalROI * 10) / 10,
+      annualizedROI: Math.round(cagr * 10) / 10,
+      wealthMultiple: Math.round(wealthMultiple * 100) / 100,
+    };
+  }
+
+  const sc = params.startingCapital;
+
   return {
     winner: winIdx === 0 ? "House-Hack" : "Never Buy (S&P)",
     winnerLabel: winIdx === 0 ? "A" : "B",
@@ -360,6 +376,8 @@ function compare(params) {
       p2NetEquity: a.p2NetEquity,
       p2Underfunded: a.p2Underfunded,
       yearlyData: a.yearlyData,
+      roi: roiStats(a.totalWealth, sc, params.years),
+      roiLiq: roiStats(a.totalWealthLiq, sc, params.years),
     },
     neverBuy: {
       totalWealth: b.totalWealth,
@@ -367,6 +385,7 @@ function compare(params) {
       surplus: b.surplus,
       totalRentPaid: b.totalRentPaid,
       yearlyData: b.yearlyData,
+      roi: roiStats(b.totalWealth, sc, params.years),
     },
   };
 }

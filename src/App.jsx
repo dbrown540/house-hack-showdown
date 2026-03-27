@@ -813,6 +813,11 @@ export default function App() {
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
           <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
           <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} />
+          <Row3 label="ROI" section />
+          <Row3 label="Total Gain" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} winIdx={wHigh(a.totalWealth - startingCapital, b.totalWealth - startingCapital)} />
+          <Row3 label="Total ROI %" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} fmtFn={v => `${(v / startingCapital * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} />
+          <Row3 label={`Annualized ROI (${years}yr CAGR)`} vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${((Math.pow(v / startingCapital, 1 / years) - 1) * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} />
+          <Row3 label="Wealth Multiple" vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${(v / startingCapital).toFixed(2)}x`} winIdx={wHigh(a.totalWealth, b.totalWealth)} highlight />
 
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", padding: "10px 12px",
             background: `${BGS[winLabel]}0.05)`, borderTop: `2px solid ${BGS[winLabel]}0.2)` }}>
