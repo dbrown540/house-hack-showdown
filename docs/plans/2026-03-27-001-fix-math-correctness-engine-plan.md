@@ -1,7 +1,7 @@
 ---
 title: "fix: Math Correctness — Engine Bugs, UI Parity, and Assumption Documentation"
 type: fix
-status: active
+status: completed
 date: 2026-03-27
 origin: docs/brainstorms/2026-03-27-math-correctness-review-requirements.md
 deepened: 2026-03-27
@@ -165,7 +165,7 @@ Test matrix structure (scripts/tests.cjs):
 
 ---
 
-- [ ] **Unit 2: Fix pmt() Zero-Rate Bug**
+- [x] **Unit 2: Fix pmt() Zero-Rate Bug**
 
 **Goal:** Correct `pmt()` so it returns a monthly payment when `rate = 0`.
 
@@ -197,7 +197,7 @@ Test matrix structure (scripts/tests.cjs):
 
 ---
 
-- [ ] **Unit 3: Fix UI/CLI Return Object Parity for calcNeverBuy**
+- [x] **Unit 3: Fix UI/CLI Return Object Parity for calcNeverBuy**
 
 **Goal:** Add `netEquityLiq: 0` to the `calcNeverBuy` return object in `src/App.jsx` to match the CLI engine's return shape.
 
@@ -229,7 +229,7 @@ Test matrix structure (scripts/tests.cjs):
 
 ---
 
-- [ ] **Unit 4: Document Model Assumptions in equations.md**
+- [x] **Unit 4: Document Model Assumptions in equations.md**
 
 **Goal:** Make all intentional-but-previously-implicit model assumptions explicit in the canonical formula reference, so reviewers and users understand the model without needing to read the code.
 
@@ -273,7 +273,7 @@ Also update the existing pmt(0) note in Section 3 to read "**Fixed in v5.1**: `p
 
 ---
 
-- [ ] **Unit 5: Final Invariant Validation and Parity Check**
+- [x] **Unit 5: Final Invariant Validation and Parity Check**
 
 **Goal:** Run the complete test suite and confirm all invariants hold. Manually verify CLI/UI parity for default params.
 
