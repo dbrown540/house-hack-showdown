@@ -397,6 +397,60 @@ test('compare() calcBuy results are self-consistent: totalWealth = portfolioValu
   near(a.totalWealth, a.portfolioValue + a.netEquity, 1, 'A totalWealth consistency ');
 });
 
+// ── SECTION 9: DEPRECIATION TAX BENEFIT ──────────────────────────────────────
+
+console.log('\n─── 9. Depreciation tax benefit ───');
+
+test('taxBenefitPct=0: annualTaxBenefit=0, totalWealth matches baseline', () => {
+  const base = compare(defaults).houseHack;
+  const withZero = compare({ ...defaults, taxBenefitPct: 0 }).houseHack;
+  assert.strictEqual(withZero.annualTaxBenefit, 0, 'annualTaxBenefit should be 0');
+  assert.strictEqual(withZero.totalWealth, base.totalWealth,
+    `totalWealth should be unchanged vs baseline: ${base.totalWealth} vs ${withZero.totalWealth}`);
+});
+
+test('taxBenefitPct=0.5, price=300000: annualTaxBenefit=$1,500', () => {
+  const a = compare({ ...defaults, taxBenefitPct: 0.5 }).houseHack;
+  assert.strictEqual(a.annualTaxBenefit, 1500,
+    `annualTaxBenefit should be 1500, got ${a.annualTaxBenefit}`);
+});
+
+test('taxBenefitPct=0.5: portfolio uplift ~$25,101 over 10yr at 10% return (±$100, due to mid-year compounding)', () => {
+  const base = compare(defaults).houseHack;
+  const withBenefit = compare({ ...defaults, taxBenefitPct: 0.5 }).houseHack;
+  const uplift = withBenefit.portfolioValue - base.portfolioValue;
+  assert.ok(Math.abs(uplift - 25101) <= 100,
+    `Portfolio uplift should be ~$25,101 (±$100), got ${uplift}`);
+});
+
+test('taxBenefitPct=0.5: Option B totalWealth is unchanged', () => {
+  const baseB = compare(defaults).neverBuy;
+  const withBenefitB = compare({ ...defaults, taxBenefitPct: 0.5 }).neverBuy;
+  assert.strictEqual(withBenefitB.totalWealth, baseB.totalWealth,
+    'B totalWealth must be unaffected by taxBenefitPct');
+});
+
+test('calcNeverBuy returns annualTaxBenefit=0 regardless of taxBenefitPct', () => {
+  const b = calcNeverBuy({ ...defaults, taxBenefitPct: 1.5 });
+  assert.strictEqual(b.annualTaxBenefit, 0,
+    `calcNeverBuy annualTaxBenefit should always be 0, got ${b.annualTaxBenefit}`);
+});
+
+test('taxBenefitPct=1.5 (max): totalWealth(A) increases by ~$75K vs baseline', () => {
+  const base = compare(defaults).houseHack;
+  const withMax = compare({ ...defaults, taxBenefitPct: 1.5 }).houseHack;
+  const uplift = withMax.totalWealth - base.totalWealth;
+  assert.ok(uplift > 60000 && uplift < 90000,
+    `Max-value portfolio uplift should be in $60K-$90K range, got ${uplift}`);
+});
+
+test('defensive guard: taxBenefitPct=undefined treated as 0', () => {
+  const withUndefined = compare({ ...defaults, taxBenefitPct: undefined }).houseHack;
+  const withZero = compare({ ...defaults, taxBenefitPct: 0 }).houseHack;
+  assert.strictEqual(withUndefined.annualTaxBenefit, withZero.annualTaxBenefit,
+    'undefined taxBenefitPct should behave same as 0');
+});
+
 // ── SUMMARY ───────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));

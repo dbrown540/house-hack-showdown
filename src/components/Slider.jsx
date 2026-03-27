@@ -1,5 +1,5 @@
-export const Slider = ({ label, value, onChange, min, max, step = 1, prefix = "$", suffix = "", color = "#fbbf24" }) => (
-  <div style={{ marginBottom: 10 }}>
+export const Slider = ({ label, value, onChange, min, max, step = 1, prefix = "$", suffix = "", color = "#fbbf24", tooltip }) => (
+  <div style={{ marginBottom: 10 }} title={tooltip}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
       <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: "var(--body)" }}>{label}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color, fontFamily: "var(--mono)" }}>

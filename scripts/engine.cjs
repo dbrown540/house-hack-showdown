@@ -46,6 +46,7 @@ function calcBuy(params) {
     phase2App, phase2TaxPct, phase2InsPct, phase2Hoa,
     // Per-property inputs
     price, rent, fullRent, repairs, appRate, rentGrowth,
+    taxBenefitPct = 0,
   } = params;
 
   const livingMonthly = weeklyCost * 52 / 12;
@@ -76,6 +77,9 @@ function calcBuy(params) {
   let totalRentCollected = 0;
   const monthlyR = rate / 100 / 12;
   let balance = loan;
+  // Defensive guard: prevent NaN or negative from direct API callers bypassing slider bounds
+  const pct = Math.max(0, taxBenefitPct || 0);
+  const annualTaxBenefit = price * pct / 100;
 
   // Phase 2 buy tracking
   let p2Balance = 0;
@@ -160,7 +164,8 @@ function calcBuy(params) {
     const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
     const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
     const curSurplus = curTakeHome - (curNet + curLiving);
-    portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
+    // annualTaxBenefit added after curSurplus is computed; does not affect surplus display value
+    portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2);
 
     // Phase 2 equity (hold = no selling costs, liq = with selling costs)
     let p2HoldEquity = 0;
@@ -218,6 +223,7 @@ function calcBuy(params) {
     homeValue: Math.round(homeValue), totalRentCollected: Math.round(totalRentCollected),
     balance: Math.round(balance),
     principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
+    annualTaxBenefit: Math.round(annualTaxBenefit),
     yearlyData,
     // Phase 2 buy fields
     p2HomeValue: Math.round(p2FinalHomeValue),
@@ -278,7 +284,7 @@ function calcNeverBuy(params) {
     surplus: Math.round(surplus0), surplusChk: Math.round(surplus0 / 2),
     housingPctGross: housingPct,
     portfolioValue: Math.round(portfolioValue),
-    grossEquity: 0, sellingCost: 0, netEquity: 0, netEquityLiq: 0,
+    grossEquity: 0, sellingCost: 0, netEquity: 0, netEquityLiq: 0, annualTaxBenefit: 0,
     totalWealth: Math.round(portfolioValue),
     totalWealthLiq: Math.round(portfolioValue),
     homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
@@ -374,6 +380,7 @@ function compare(params) {
       leftoverCapital: a.leftoverCapital,
       underfunded: a.underfunded,
       totalRentCollected: a.totalRentCollected,
+      annualTaxBenefit: a.annualTaxBenefit,
       p2NetEquity: a.p2NetEquity,
       p2Underfunded: a.p2Underfunded,
       yearlyData: a.yearlyData,

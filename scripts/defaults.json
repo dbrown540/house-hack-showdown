@@ -28,6 +28,7 @@
   "repA": 0,
   "appA": 2.5,
   "rgA": 2,
+  "taxBenefitPct": 0,
 
   "phase2Mode": "rent",
   "phase2Utils": 300,

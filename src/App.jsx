@@ -46,6 +46,7 @@ export default function App() {
   const [repA, setRepA] = useState(0);
   const [appA, setAppA] = useState(2.5);
   const [rgA, setRgA] = useState(2);
+  const [taxBenefitPctA, setTaxBenefitPctA] = useState(0);
 
   // ── PHASE 2 PERSONAL HOUSING ──
   const [phase2Mode, setPhase2Mode] = useState("rent"); // "rent" | "buy"
@@ -99,6 +100,8 @@ export default function App() {
     let totalRentCollected = 0;
     const monthlyR = rate / 100 / 12;
     let balance = loan;
+    // Depreciation tax benefit: fixed annual cash flow based on purchase price
+    const annualTaxBenefit = price * (taxBenefitPctA / 100);
 
     // Phase 2 buy tracking
     let p2Balance = 0;
@@ -184,8 +187,10 @@ export default function App() {
       const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
       const curSurplus = curTakeHome - (curNet + curLiving);
       // Mid-year approximation: existing balance gets full-year return,
-      // new contributions get half-year return on average
-      portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
+      // new contributions get half-year return on average.
+      // annualTaxBenefit is added here (after curSurplus is computed) so it does not
+      // affect the surplus display row and remains separable for debugging.
+      portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2);
 
       // Phase 2 equity (hold = no selling costs, liq = with selling costs)
       let p2HoldEquity = 0;
@@ -244,6 +249,7 @@ export default function App() {
       homeValue: Math.round(homeValue), totalRentCollected: Math.round(totalRentCollected),
       balance: Math.round(balance),
       principalPaid: Math.round(principalPaid), appreciationGain: Math.round(appreciationGain),
+      annualTaxBenefit: Math.round(annualTaxBenefit),
       yearlyData,
       // Phase 2 buy fields
       p2HomeValue: Math.round(p2FinalHomeValue),
@@ -293,7 +299,7 @@ export default function App() {
       surplus: Math.round(surplus0), surplusChk: Math.round(surplus0 / 2),
       housingPctGross: housingPct,
       portfolioValue: Math.round(portfolioValue),
-      grossEquity: 0, sellingCost: 0, netEquity: 0, netEquityLiq: 0,
+      grossEquity: 0, sellingCost: 0, netEquity: 0, netEquityLiq: 0, annualTaxBenefit: 0,
       totalWealth: Math.round(portfolioValue),
       homeValue: 0, totalRentCollected: 0, totalRentPaid: Math.round(totalRentPaid),
       balance: 0,
@@ -304,7 +310,7 @@ export default function App() {
   };
 
   const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Utils, phase2RenterIns, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
-  const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, ...deps]);
+  const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, taxBenefitPctA, ...deps]);
   const b = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
 
   // ── NEVER-BUY WITH CUSTOM RETURN (for binary search) ──
@@ -510,6 +516,7 @@ export default function App() {
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} />
+            <Slider label="Tax Benefit (Depreciation)" value={taxBenefitPctA} onChange={setTaxBenefitPctA} min={0} max={1.5} step={0.1} prefix="" suffix="% of property value per year (tax savings)" color={COLORS.A} tooltip="Rental properties can deduct annual depreciation (~1/27.5 of the building value, based on original purchase price, not current value) from taxable income, sheltering rental income from taxes. This slider adds the equivalent annual savings to Option A's cash flow. 0% = no tax effect (default). 0.5% ≈ typical landlord in the 22–24% tax bracket. 1.0% ≈ higher bracket or high building-value ratio. Does NOT model: mortgage interest deduction, passive loss rules, depreciation recapture on sale, or state taxes." />
           </div>
           {/* B */}
           <div style={{ background: `linear-gradient(180deg, ${BGS.B}0.04) 0%, ${BGS.B}0.01) 100%)`,
@@ -810,6 +817,7 @@ export default function App() {
           )}
           <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
           <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
+          {taxBenefitPctA > 0 && <Row3 label="Tax Savings (Depreciation)" vals={[a.annualTaxBenefit, 0]} winIdx={wHigh(a.annualTaxBenefit, 0)} />}
           <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
           <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
           <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} />
