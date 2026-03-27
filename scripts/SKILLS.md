@@ -2,6 +2,35 @@
 
 Run house-hack vs. S&P 500 comparisons without the UI. All calculations mirror the v5 web app exactly.
 
+## When to Use the CLI vs. the UI
+
+| Situation | Use |
+|-----------|-----|
+| Evaluating a single listing you're actively considering | UI — faster to tune sliders interactively |
+| Comparing 3+ listings side by side | CLI — batch mode gives a clean summary table |
+| Sensitivity analysis (what if rent drops 20%?) | CLI — loop a variable through a range |
+| Stress-testing a deal before making an offer | CLI — combine with `--yearly` to see year-by-year trajectory |
+| Sharing a repeatable scenario with a partner | CLI — JSON params are self-documenting |
+
+## Real Estate Research Workflow
+
+Before running numbers, you need a realistic rent estimate. See [`research.md`](research.md) for a structured prompt to get a property-specific basement rent estimate for southwest Baltimore / Baltimore County ZIP codes (21228, 21229, 21250, 21043, 21227). The output maps directly to `rA` in the params below.
+
+**Full workflow for evaluating a listing:**
+1. Paste the Zillow listing into the `research.md` prompt → get conservative / base / optimistic rent
+2. Run a three-scenario batch (conservative, base, optimistic) with `compare.cjs`
+3. Check `spBreakeven` — if even the conservative scenario still beats S&P below 12%, it's worth pursuing
+4. Tune `repA` (upfront repairs), `appA` (appreciation), and `phase2Mode` to match the specific property
+
+```bash
+# Step 2: three-scenario batch from research output
+node scripts/compare.cjs '[
+  {"pA": 310000, "rA": 850,  "fullRentA": 2200},
+  {"pA": 310000, "rA": 1100, "fullRentA": 2400},
+  {"pA": 310000, "rA": 1350, "fullRentA": 2600}
+]'
+```
+
 ## Quick Start
 
 ```bash
@@ -75,7 +104,7 @@ Any variable not provided uses the default from `scripts/defaults.json`. Pass on
 | `rA` | 1000 | 0–4,000 | Monthly rent during hack phase |
 | `fullRentA` | 2400 | 0–5,000 | Monthly rent after move-out |
 | `repA` | 0 | 0–50,000 | Upfront repairs |
-| `appA` | 2.5 | 0–6 | Annual appreciation % |
+| `appA` | 3.0 | 0–6 | Annual appreciation % |
 | `rgA` | 2 | 0–5 | Annual rent growth % |
 | `taxBenefitPct` | 0 | 0–1.5 | Annual depreciation tax savings as % of purchase price (0 = no tax effect; 0.5 ≈ typical 22–24% bracket) |
 
@@ -153,6 +182,73 @@ Any variable not provided uses the default from `scripts/defaults.json`. Pass on
 ### Batch Mode
 
 Returns an array of the above, each with an additional `scenario` field (1-indexed). A summary table is printed to stderr.
+
+## Deal Evaluation Patterns
+
+These are the patterns most useful when vetting an actual listing.
+
+### Quick viability check (is this deal even worth researching further?)
+
+```bash
+# Plug in asking price and rough rent estimate — takes 10 seconds
+node scripts/compare.cjs '{"pA": 310000, "rA": 1100, "fullRentA": 2400}'
+```
+
+Check `result.winner` and `result.result.spBreakeven`. If S&P needs to exceed ~13% to beat the house-hack, the deal has real merit.
+
+### Evaluate repairs vs. no repairs
+
+```bash
+node scripts/compare.cjs '[
+  {"pA": 310000, "rA": 1100, "repA": 0},
+  {"pA": 310000, "rA": 1100, "repA": 10000},
+  {"pA": 310000, "rA": 1100, "repA": 25000}
+]'
+```
+
+### What rent do I actually need to break even vs. S&P?
+
+Run the base scenario, then look at `result.result.spBreakeven`. If it's above 10, lower rent until spBreakeven crosses 10 — that's your floor.
+
+### Does the timeline matter? (short flip vs. long hold)
+
+```bash
+node scripts/compare.cjs '[
+  {"pA": 310000, "rA": 1100, "years": 5},
+  {"pA": 310000, "rA": 1100, "years": 10},
+  {"pA": 310000, "rA": 1100, "years": 15}
+]'
+```
+
+Short holds usually favor S&P because selling costs hurt early. Look for the crossover year.
+
+### Phase 2 buy vs. rent after moving out
+
+```bash
+node scripts/compare.cjs '[
+  {"pA": 310000, "rA": 1100, "phase2Mode": "rent",  "phase2Rent": 1400},
+  {"pA": 310000, "rA": 1100, "phase2Mode": "buy",   "phase2Price": 375000}
+]'
+```
+
+### Full deal model with all local assumptions dialed in
+
+```bash
+node scripts/compare.cjs '{
+  "pA": 310000,
+  "rA": 1100,
+  "fullRentA": 2400,
+  "repA": 8000,
+  "appA": 3.0,
+  "taxPct": 1.21,
+  "rate": 6.875,
+  "downPct": 5,
+  "hackYears": 2,
+  "phase2Mode": "rent",
+  "phase2Rent": 1400,
+  "years": 10
+}'
+```
 
 ## Common Patterns
 

@@ -44,7 +44,7 @@ export default function App() {
   const [rA, setRa] = useState(1000);
   const [fullRentA, setFullRentA] = useState(2400);
   const [repA, setRepA] = useState(0);
-  const [appA, setAppA] = useState(2.5);
+  const [appA, setAppA] = useState(3.0);
   const [rgA, setRgA] = useState(2);
   const [taxBenefitPctA, setTaxBenefitPctA] = useState(0);
 

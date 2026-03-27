@@ -2,7 +2,7 @@
 
 A single-page React financial comparison tool that models long-term wealth outcomes for **House-Hack (Option A)** vs. **Never Buy / rent + S&P 500 investing (Option B)**.
 
-Live at: https://dannysmith.github.io/house-hack-showdown/
+Live at: https://dbrown540.github.io/house-hack-showdown/
 
 ## Features
 
