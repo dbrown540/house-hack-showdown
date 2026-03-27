@@ -83,7 +83,7 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 ## 3) Core helper equations (`src/utils/math.js`)
 - Mortgage payment:
   - `pmt(rate, nper, pv)` where `rate` is annual decimal and `nper` is years.
-  - If `rate = 0`: `pv / nper` (**Note:** this returns an annual amount, not monthly — edge-case bug when rate = 0)
+  - If `rate = 0`: `pv / (nper * 12)` — monthly payment. (**Fixed in v5.1**: previously returned `pv / nper`, an annual amount.)
   - Else with `r_m = rate / 12`, `n = nper * 12`:
   - `payment = pv * (r_m * (1 + r_m)^n) / ((1 + r_m)^n - 1)`
 - Required monthly rent to close wealth gap:
@@ -275,6 +275,42 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - S&P breakeven return (binary search):
   - Solve `calcNeverBuyWealth(return) ~= a.totalWealth` over `[0, 50]`, 50 iterations.
   - Uses same mid-year compounding: `pv = pv * (1 + cr) + curSurplus * 12 * (1 + cr / 2)`
+
+## 8) Model Assumptions and Known Simplifications
+
+These assumptions are intentional model choices, not bugs. Each entry describes the implementation, the rationale, and the real-world alternative for context.
+
+### 1. PMI drop uses current appreciated value
+- **Implementation:** `monthlyPMI = balance > 0.8 * curHomeValue ? ... : 0` — where `curHomeValue` is the appreciated value at year `y`.
+- **Why:** Simpler to implement; no additional input needed.
+- **Effect:** In high-appreciation scenarios PMI drops faster than it would under real-world rules, slightly favoring Option A.
+- **Real-world alternative:** Lenders typically require PMI until the loan-to-value ratio reaches 80% of the *original appraised value*, unless a formal reappraisal is ordered.
+
+### 2. Emergency fund never compounds
+- **Implementation:** `emergencyFund = round(price * emergencyPct / 100)` is deducted from `startingCapital` and excluded from `portfolioValue` permanently.
+- **Why:** Conservative assumption — treats the emergency fund as illiquid and unavailable for investment.
+- **Effect:** Slightly disadvantages Option A vs. a model where the emergency fund earns a return.
+- **Real-world alternative:** Emergency funds held in HYSA or money-market accounts do earn returns (typically 4–5% as of 2024).
+
+### 3. Income growth hardcoded at 3% per year
+- **Implementation:** `curTakeHome = monthlyIncome * (1.03)^(y - 1)` in both `calcBuy` and `calcNeverBuy`.
+- **Why:** Reflects long-run nominal wage growth without adding another slider.
+- **Effect:** When `inflationRate > 3`, real income declines in the model. Income growth is independent of the `inflationRate` input.
+- **Real-world alternative:** A configurable income growth slider would let users model faster or slower wage trajectories.
+
+### 4. Vacancy/maintenance rate applied uniformly across phases
+- **Implementation:** `curEffRent = curRent * (1 - maintVacancyPct / 100)` applies the same rate in Phase 1 (owner-occupied, partial rent) and Phase 2 (full rental).
+- **Why:** Single input keeps the model simple; vacancy risk was judged similar enough across phases for default parameters.
+- **Effect:** Phase 1 vacancy risk may be understated (owner is present, fewer vacancy gaps) or overstated depending on property type.
+- **Real-world alternative:** Separate maintenance and vacancy rates for each phase.
+
+### 5. Winner comparison uses hold equity (no selling costs)
+- **Implementation:** `totalWealth = portfolioValue + homeValue - balance`. Liquidation equity (`homeValue - balance - sellingCosts`) is computed and displayed as a secondary metric but is not used for the winner determination.
+- **Why:** Assumes the property is held at the evaluation horizon, not sold. Selling costs are transaction costs, not wealth destruction.
+- **Effect:** Option A's winning margin is slightly higher than it would be if liquidation equity were the primary metric. The liquidation net worth row makes the after-costs position visible.
+- **Real-world alternative:** Some models use liquidation equity as the primary metric to reflect realistic exit value.
+
+---
 
 ## 7) v5 changelog (from v4)
 
