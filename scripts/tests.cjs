@@ -21,8 +21,8 @@ const defaults = require('./defaults.json');
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
 // Map defaults.json property names (pA, rA, ...) to calcBuy param names.
-// calcBuy() takes: { price, rent, fullRent, repairs, appRate, rentGrowth, ...shared }
-// defaults.json uses: { pA, rA, fullRentA, repA, appA, rgA }
+// calcBuy() takes: { price, rent, fullRent, phase2BasementRent, repairs, appRate, rentGrowth, ...shared }
+// defaults.json uses: { pA, rA, fullRentA, phase2BasementRentA, repA, appA, rgA }
 function mkBuyParams(overrides = {}) {
   const d = { ...defaults, ...overrides };
   return {
@@ -30,6 +30,7 @@ function mkBuyParams(overrides = {}) {
     price:     d.pA,
     rent:      d.rA,
     fullRent:  d.fullRentA,
+    phase2BasementRent: d.phase2BasementRentA,
     repairs:   d.repA,
     appRate:   d.appA,
     rentGrowth: d.rgA,
@@ -313,6 +314,15 @@ test('Phase 2 rent transition: fullRent applied with no growth in first Phase 2 
   const a0 = calcBuy(mkBuyParams({ hackYears: 0, years: 1, rgA: 0 }));
   near(a2.portfolioValue, a0.portfolioValue, 0.01,
     `portfolioValue at first Phase 2 year (hackYears=0, y=1) should be identical for rgA=2 vs rgA=0 `);
+});
+
+test('Phase 2 basement rent stacks on top of fullRent after move-out', () => {
+  const base = calcBuy(mkBuyParams({ hackYears: 2, years: 3, fullRentA: 2400, phase2BasementRentA: 0 }));
+  const plusBasement = calcBuy(mkBuyParams({ hackYears: 2, years: 3, fullRentA: 2400, phase2BasementRentA: 800 }));
+  assert.ok(plusBasement.totalRentCollected > base.totalRentCollected,
+    `totalRentCollected should increase when phase2 basement rent is added: base=${base.totalRentCollected}, plus=${plusBasement.totalRentCollected}`);
+  assert.ok(plusBasement.portfolioValue > base.portfolioValue,
+    `portfolioValue should increase when phase2 basement rent is added: base=${base.portfolioValue}, plus=${plusBasement.portfolioValue}`);
 });
 
 // ── SECTION 6: EDGE CASES ─────────────────────────────────────────────────────

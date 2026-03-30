@@ -45,7 +45,7 @@ function calcBuy(params) {
     phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate,
     phase2App, phase2TaxPct, phase2InsPct, phase2Hoa,
     // Per-property inputs
-    price, rent, fullRent, repairs, appRate, rentGrowth,
+    price, rent, fullRent, phase2BasementRent = 0, repairs, appRate, rentGrowth,
     taxBenefitPct = 0,
   } = params;
 
@@ -105,7 +105,7 @@ function calcBuy(params) {
 
     const inHackPhase = y <= hackYears;
     const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
-    const baseRent = inHackPhase ? rent : fullRent;
+    const baseRent = inHackPhase ? rent : fullRent + phase2BasementRent;
     const rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1);
     const curRent = baseRent * Math.pow(1 + rentGrowth / 100, Math.max(0, rentGrowthYears));
     const curEffRent = curRent * (1 - maintVacancyPct / 100);
@@ -310,6 +310,7 @@ function compare(params) {
     price: params.pA,
     rent: params.rA,
     fullRent: params.fullRentA,
+    phase2BasementRent: params.phase2BasementRentA,
     repairs: params.repA,
     appRate: params.appA,
     rentGrowth: params.rgA,

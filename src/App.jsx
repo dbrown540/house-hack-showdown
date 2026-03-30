@@ -43,6 +43,7 @@ export default function App() {
   const [pA, setPa] = useState(300000);
   const [rA, setRa] = useState(1000);
   const [fullRentA, setFullRentA] = useState(2400);
+  const [phase2BasementRentA, setPhase2BasementRentA] = useState(0);
   const [repA, setRepA] = useState(0);
   const [appA, setAppA] = useState(3.0);
   const [rgA, setRgA] = useState(2);
@@ -118,7 +119,7 @@ export default function App() {
   };
 
   // ── HOUSE-HACK CALC ──
-  const calcBuy = (price, rent, fullRent, repairs, appRate, rentGrowth) => {
+  const calcBuy = (price, rent, fullRent, phase2BasementRent, repairs, appRate, rentGrowth) => {
     const down = Math.round(price * downPct / 100);
     const loan = price - down;
     const monthlyPI = pmt(rate / 100, 30, loan);
@@ -173,7 +174,7 @@ export default function App() {
 
       const inHackPhase = y <= hackYears;
       const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
-      const baseRent = inHackPhase ? rent : fullRent;
+      const baseRent = inHackPhase ? rent : fullRent + phase2BasementRent;
       const rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1);
       const curRent = baseRent * Math.pow(1 + rentGrowth / 100, Math.max(0, rentGrowthYears));
       const curEffRent = curRent * (1 - maintVacancyPct / 100);
@@ -362,7 +363,7 @@ export default function App() {
   };
 
   const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyMonths, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Utils, phase2RenterIns, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
-  const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, taxBenefitPctA, ...deps]);
+  const a = useMemo(() => calcBuy(pA, rA, fullRentA, phase2BasementRentA, repA, appA, rgA), [pA, rA, fullRentA, phase2BasementRentA, repA, appA, rgA, taxBenefitPctA, ...deps]);
   const b = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
 
   // ── NEVER-BUY WITH CUSTOM RETURN (for binary search) ──
@@ -564,7 +565,8 @@ export default function App() {
             </div>
             <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} tooltip="Purchase price of the house-hack property. Drives the mortgage payment, property taxes, and insurance." />
             <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} tooltip="Monthly rent collected from your tenant(s) while you live in the property during the house-hack phase." />
-            <Slider label="Full Rent / Mo (after move-out)" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} tooltip="Total monthly rent collected from all units once you move out and rent the whole property. Should be equal to or higher than the house-hack rent." />
+            <Slider label="Main House Rent / Mo" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} tooltip="Monthly rent collected from the main house or primary upstairs portion after you move out. Does not include the separate Phase 2 basement rent slider below." />
+            <Slider label="Phase 2 Basement Rent / Mo" value={phase2BasementRentA} onChange={setPhase2BasementRentA} min={0} max={3000} step={50} color={COLORS.A} tooltip="Additional basement rent collected after move-out. This stacks on top of Main House Rent during Phase 2 and stays at $0 during the live-in house-hack years." />
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} tooltip="One-time renovation or repair costs paid at purchase, drawn from starting capital before calculating your initial portfolio." />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} tooltip="Expected annual home price growth for this property. Increases equity and terminal sale value." />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} tooltip="Annual rate at which rental income grows over the projection period, reflecting lease renewals and market increases." />

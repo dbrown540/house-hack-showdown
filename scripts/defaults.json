@@ -25,6 +25,7 @@
   "pA": 300000,
   "rA": 1000,
   "fullRentA": 2400,
+  "phase2BasementRentA": 0,
   "repA": 0,
   "appA": 2.5,
   "rgA": 2,
