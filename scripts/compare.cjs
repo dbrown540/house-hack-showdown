@@ -6,6 +6,7 @@
  * Usage:
  *   node scripts/compare.cjs                                  # run with defaults
  *   node scripts/compare.cjs '{"pA": 280000, "rA": 1200}'    # override specific vars
+ *   node scripts/compare.cjs '{"phase2Mode":"buy","phase2BasementRentA":800}'  # add Property 1 basement rent in Phase 2 buy mode
  *   node scripts/compare.cjs < scenarios.json                 # pipe JSON file
  *   node scripts/compare.cjs '[{...}, {...}]'                 # batch mode (array)
  *

@@ -1,6 +1,6 @@
 # Basement Rent Research Prompt
 
-Use this prompt with Claude (or any capable LLM with web search) when evaluating a specific property. Paste the full prompt followed by the property description. The output feeds directly into `compare.cjs` as the `rA` value.
+Use this prompt with Claude (or any capable LLM with web search) when evaluating a specific property. Paste the full prompt followed by the property description. The output feeds directly into `compare.cjs` as the `rA` value for the house-hack phase. If you later keep collecting basement rent after moving out and buying another home, that can also map to `phase2BasementRentA`.
 
 ---
 
@@ -181,3 +181,21 @@ node scripts/compare.cjs '[
   {"pA": 310000, "rA": 1350, "fullRentA": 2600}
 ]'
 ```
+
+If you use the calculator's Phase 2 `Buy` path and still rent the basement in Property 1 after move-out, plug that extra income into `phase2BasementRentA`:
+
+```bash
+node scripts/compare.cjs '{
+  "pA": 310000,
+  "rA": 1100,
+  "fullRentA": 2400,
+  "phase2Mode": "buy",
+  "phase2BasementRentA": 900,
+  "appA": 3.0
+}'
+```
+
+In that setup:
+- `rA` = rent collected during the live-in house-hack phase
+- `fullRentA` = main-house rent after move-out
+- `phase2BasementRentA` = additional basement rent after move-out, only used when `phase2Mode` is `buy`

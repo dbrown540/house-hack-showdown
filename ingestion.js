@@ -27,9 +27,9 @@ function copyToClipboard(text) {
   });
 }
 
-function readMultilineInput(endToken = 'END') {
+function readMultilineInput(label, endToken = 'END') {
   return new Promise((resolve) => {
-    console.log('Paste the Zillow listing below.');
+    console.log(`${label}`);
     console.log(`When finished, type ${endToken} on its own line and press Enter.\n`);
 
     const lines = [];
@@ -53,29 +53,67 @@ function readMultilineInput(endToken = 'END') {
   });
 }
 
+function buildPrompt({ listing, taxInfo }) {
+  return `# House Hack Property Analysis Request
+
+Use \`.claude/skills/house-hack-research/zips/20743.md\` as the reference methodology. Analyze the following property for a house-hack scenario.
+
+**First, before any other analysis, determine whether the basement is likely legally rentable.** If it is not clearly legally rentable, say so immediately, explain why, and treat that as the main gating issue.
+
+Then provide:
+- basement rentability assessment (legal + physical condition)
+- basement rental estimate as-is
+- basement rental estimate after improvements
+- full house rental estimate as-is
+- full house rental estimate after improvements if relevant
+- upfront cost estimates to make the basement rentable
+- annual depreciation tax benefit using property value / 27.5, including annual % of property value
+- key risks and red flags
+
+Distinguish clearly between:
+- legally rentable
+- physically rentable
+- tenant-ready / marketable
+
+End with a clear recommendation: pursue, pursue with caution, or do not pursue.
+
+## Listing Information
+
+${listing}
+
+## Tax / Property Value Information
+
+${taxInfo}
+
+## Notes
+
+- Base all estimates on the listing details and tax/property information above.
+- If property value, assessed value, tax record details, or land/building split are incomplete, state your assumptions clearly.
+- For depreciation, call out that land is not depreciable where relevant, and explain whether your estimate uses total property value as a rough proxy or an adjusted building-only assumption.
+- If the basement is not legally rentable as-is, still provide a brief view of what would likely be required to make it rentable and the rough before/after rent difference if feasible.
+`;
+}
+
 async function main() {
-  console.log('House Hack Listing Wrapper\n');
+  console.log('House Hack Listing + Tax Wrapper\n');
 
-  const listing = await readMultilineInput();
-
+  const listing = await readMultilineInput('Paste the property listing below.');
   if (!listing) {
     console.error('\nNo listing text was provided.');
     process.exit(1);
   }
 
-  const prompt = `I'm evaluating a potential house-hack property. Here's the listing:
+  console.log('');
+  const taxInfo = await readMultilineInput(
+    'Paste the tax, assessment, and any property value information below.'
+  );
 
-${listing}
+  if (!taxInfo) {
+    console.error('\nNo tax/property value information was provided.');
+    process.exit(1);
+  }
 
-My setup:
-- I will live there with my girlfriend during the hack phase. She pays $510/month toward household costs.
-- The basement will be rented to a separate tenant during the hack phase (in addition to GF's $510).
-- Hack phase duration: 1 year, then we move out and rent the whole property.
-
-Please:
-1. Review the basement description and estimate what it could realistically rent for (conservative / base / optimistic), noting any red flags or required improvements and their estimated cost
-2. Run the house-hack simulation using rA = $510 + base basement rent, repA = any required improvement cost, and fullRentA = the full-house rent figure above
-3. Include timeline sensitivity (5 / 10 / 15 / 20 years) and a verdict: Pass or Buy`;
+  const prompt = buildPrompt({ listing, taxInfo });
 
   try {
     await copyToClipboard(prompt);

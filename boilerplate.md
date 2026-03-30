@@ -1,14 +1,24 @@
-  I'm evaluating a potential house-hack property. Here's the listing:                                                                                                                          
-                                                                                                                                                                                               
-  [PASTE LISTING HERE]
-                                                                                                                                                                                               
-  My setup:                                                                                                                                                                                    
-  - I will live there with my girlfriend during the hack phase. She pays $510/month toward household costs.                                                                                    
-  - The basement will be rented to a separate tenant during the hack phase (in addition to GF's $510).     
-  - Hack phase duration: 1 year, then we move out and rent the whole property.                                                                                                                                                                                                                                                               
-                                                                                                                                                                                               
-  Please:                                                                                                                                                                                      
-  1. Review the basement description and estimate what it could realistically rent for (conservative / base / optimistic), noting any red flags or required improvements and their estimated   
-  cost                                                                                                                                                                                         
-  2. Run the house-hack simulation using rA = $510 + base basement rent, repA = any required improvement cost, and fullRentA = the full-house rent figure above
-  3. Include timeline sensitivity (5 / 10 / 15 / 20 years) and a verdict: Pass or Buy        
+Use .claude/skills/house-hack-research/zips/20743.md as the reference methodology. Analyze the following property for a house-hack scenario.
+
+First, before any other analysis, determine whether the basement is likely legally rentable. If it is not clearly legally rentable, say so immediately, explain why, and treat that as the main gating issue.
+
+Then provide:
+
+basement rentability assessment (legal + physical condition)
+basement rental estimate as-is
+basement rental estimate after improvements
+full house rental estimate as-is
+full house rental estimate after improvements if relevant
+upfront cost estimates to make the basement rentable
+annual depreciation tax benefit using property value / 27.5, including annual % of property value
+key risks and red flags
+
+Distinguish clearly between:
+
+legally rentable
+physically rentable
+tenant-ready / marketable
+
+End with a clear recommendation: pursue, pursue with caution, or do not pursue.
+
+[PASTE LISTING HERE]
