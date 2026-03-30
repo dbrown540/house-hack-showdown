@@ -105,7 +105,8 @@ function calcBuy(params) {
 
     const inHackPhase = y <= hackYears;
     const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
-    const baseRent = inHackPhase ? rent : fullRent + phase2BasementRent;
+    const activePhase2BasementRent = phase2Mode === 'buy' ? phase2BasementRent : 0;
+    const baseRent = inHackPhase ? rent : fullRent + activePhase2BasementRent;
     const rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1);
     const curRent = baseRent * Math.pow(1 + rentGrowth / 100, Math.max(0, rentGrowthYears));
     const curEffRent = curRent * (1 - maintVacancyPct / 100);

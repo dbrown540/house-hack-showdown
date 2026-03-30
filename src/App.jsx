@@ -174,7 +174,8 @@ export default function App() {
 
       const inHackPhase = y <= hackYears;
       const inflFactor = Math.pow(1 + inflationRate / 100, y - 1);
-      const baseRent = inHackPhase ? rent : fullRent + phase2BasementRent;
+      const activePhase2BasementRent = phase2Mode === "buy" ? phase2BasementRent : 0;
+      const baseRent = inHackPhase ? rent : fullRent + activePhase2BasementRent;
       const rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1);
       const curRent = baseRent * Math.pow(1 + rentGrowth / 100, Math.max(0, rentGrowthYears));
       const curEffRent = curRent * (1 - maintVacancyPct / 100);
@@ -520,6 +521,7 @@ export default function App() {
                 <Slider label="Phase 2 Home Insurance" value={phase2InsPct} onChange={setPhase2InsPct} min={0.2} max={1.5} step={0.05} prefix="" suffix="%" color="#22c55e" tooltip="Annual homeowners insurance premium for the Phase 2 home, as a percentage of its value." />
                 <Slider label="Phase 2 HOA / Mo" value={phase2Hoa} onChange={setPhase2Hoa} min={0} max={1200} step={25} color="#22c55e" tooltip="Monthly HOA fee for your Phase 2 home, if applicable. Set to $0 if none." />
                 <Slider label="Phase 2 Utilities / Mo" value={phase2Utils} onChange={setPhase2Utils} min={0} max={600} step={25} color="#22c55e" tooltip="Your personal monthly utility costs for the Phase 2 home you own." />
+                <Slider label="Phase 2 Basement Rent / Mo" value={phase2BasementRentA} onChange={setPhase2BasementRentA} min={0} max={3000} step={50} color="#22c55e" tooltip="Additional basement rent collected from Property 1 after move-out when you buy a second home in Phase 2. This stacks on top of Main House Rent and helps offset the new owner-occupied housing cost." />
               </div>
             )}
           </div>
@@ -565,8 +567,7 @@ export default function App() {
             </div>
             <Slider label="Home Price" value={pA} onChange={setPa} min={100000} max={750000} step={5000} color={COLORS.A} tooltip="Purchase price of the house-hack property. Drives the mortgage payment, property taxes, and insurance." />
             <Slider label="Rental Income / Mo" value={rA} onChange={setRa} min={0} max={4000} step={50} color={COLORS.A} tooltip="Monthly rent collected from your tenant(s) while you live in the property during the house-hack phase." />
-            <Slider label="Main House Rent / Mo" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} tooltip="Monthly rent collected from the main house or primary upstairs portion after you move out. Does not include the separate Phase 2 basement rent slider below." />
-            <Slider label="Phase 2 Basement Rent / Mo" value={phase2BasementRentA} onChange={setPhase2BasementRentA} min={0} max={3000} step={50} color={COLORS.A} tooltip="Additional basement rent collected after move-out. This stacks on top of Main House Rent during Phase 2 and stays at $0 during the live-in house-hack years." />
+            <Slider label="Main House Rent / Mo" value={fullRentA} onChange={setFullRentA} min={0} max={5000} step={50} color={COLORS.A} tooltip="Monthly rent collected from the main house or primary upstairs portion after you move out." />
             <Slider label="Upfront Repairs" value={repA} onChange={setRepA} min={0} max={50000} step={1000} color={COLORS.A} tooltip="One-time renovation or repair costs paid at purchase, drawn from starting capital before calculating your initial portfolio." />
             <Slider label="Appreciation" value={appA} onChange={setAppA} min={0} max={6} step={0.25} prefix="" suffix="%" color={COLORS.A} tooltip="Expected annual home price growth for this property. Increases equity and terminal sale value." />
             <Slider label="Rent Growth" value={rgA} onChange={setRgA} min={0} max={5} step={0.5} prefix="" suffix="%" color={COLORS.A} tooltip="Annual rate at which rental income grows over the projection period, reflecting lease renewals and market increases." />

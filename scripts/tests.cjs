@@ -317,12 +317,21 @@ test('Phase 2 rent transition: fullRent applied with no growth in first Phase 2 
 });
 
 test('Phase 2 basement rent stacks on top of fullRent after move-out', () => {
-  const base = calcBuy(mkBuyParams({ hackYears: 2, years: 3, fullRentA: 2400, phase2BasementRentA: 0 }));
-  const plusBasement = calcBuy(mkBuyParams({ hackYears: 2, years: 3, fullRentA: 2400, phase2BasementRentA: 800 }));
+  const base = calcBuy(mkBuyParams({ hackYears: 2, years: 3, phase2Mode: 'buy', fullRentA: 2400, phase2BasementRentA: 0 }));
+  const plusBasement = calcBuy(mkBuyParams({ hackYears: 2, years: 3, phase2Mode: 'buy', fullRentA: 2400, phase2BasementRentA: 800 }));
   assert.ok(plusBasement.totalRentCollected > base.totalRentCollected,
     `totalRentCollected should increase when phase2 basement rent is added: base=${base.totalRentCollected}, plus=${plusBasement.totalRentCollected}`);
   assert.ok(plusBasement.portfolioValue > base.portfolioValue,
     `portfolioValue should increase when phase2 basement rent is added: base=${base.portfolioValue}, plus=${plusBasement.portfolioValue}`);
+});
+
+test('Phase 2 basement rent is ignored when phase2Mode=rent', () => {
+  const base = calcBuy(mkBuyParams({ hackYears: 2, years: 3, phase2Mode: 'rent', fullRentA: 2400, phase2BasementRentA: 0 }));
+  const withBasement = calcBuy(mkBuyParams({ hackYears: 2, years: 3, phase2Mode: 'rent', fullRentA: 2400, phase2BasementRentA: 800 }));
+  assert.strictEqual(withBasement.totalRentCollected, base.totalRentCollected,
+    `totalRentCollected should not change in rent mode: base=${base.totalRentCollected}, withBasement=${withBasement.totalRentCollected}`);
+  assert.strictEqual(withBasement.portfolioValue, base.portfolioValue,
+    `portfolioValue should not change in rent mode: base=${base.portfolioValue}, withBasement=${withBasement.portfolioValue}`);
 });
 
 // ── SECTION 6: EDGE CASES ─────────────────────────────────────────────────────
