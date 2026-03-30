@@ -73,6 +73,49 @@ export default function App() {
   const livingMonthly = weeklyCost * 52 / 12;
   const monthlyIncome = takeHome * 2;
   const r = investRet / 100;
+  const metricTooltips = {
+    upfrontSection: "Where your starting cash goes on day one before any ongoing compounding starts.",
+    cashToClose: "Total cash required to purchase Option A on day one: down payment, repairs, and buyer closing costs.",
+    buyClosingCostsMetric: "Buyer-side transaction costs paid upfront for Option A. Option B has no home purchase closing costs.",
+    emergencyFund: "Cash reserve held outside the investment portfolio to cover vacancy or carrying costs. Larger set-asides reduce invested capital on day one.",
+    leftoverCapital: "Starting capital left after purchase costs and reserves. This amount is invested immediately and compounds for the full projection.",
+    monthlySection: "Year-1 monthly cash flow comparison before later rent growth, appreciation, and inflation change the picture.",
+    mortgagePiti: "Monthly principal, interest, property taxes, and homeowners insurance for Option A's first property. PMI is shown separately through net housing cost.",
+    hoaFees: "Year-1 HOA dues included in monthly housing costs for owners. Renters are shown as $0 here.",
+    rentPaid: "Monthly rent payment in Option B during year 1.",
+    effectiveRentalIncome: "Year-1 tenant rent in Option A after the maintenance and vacancy haircut is applied.",
+    housingPct: "Net monthly housing cost divided by monthly take-home income. Lower percentages leave more room in the budget.",
+    netHousing: "Monthly housing cost after rent offsets and utilities. This is the out-of-pocket housing burden before groceries, gas, and other living costs.",
+    totalExpenses: "Total year-1 monthly spend used by the model: housing plus groceries/gas and other recurring costs included in each scenario.",
+    monthlySurplus: "Monthly cash left after modeled expenses. Positive amounts are invested; negative amounts mean the scenario is short on cash flow.",
+    surplusCheck: "Monthly surplus expressed as a share of take-home income. Higher percentages mean more breathing room and more investable cash.",
+    outcomeSection: `Where each option stands after ${years} years, before and after sale costs.`,
+    homeValue: "Projected market value of Option A's first property at the end of the projection.",
+    remainingMortgage: "Mortgage balance still owed on Option A's first property at the end of the projection.",
+    principalPaid: "Portion of the original mortgage that has been paid down through scheduled payments. This is equity created by amortization, not appreciation.",
+    appreciationGain: "Increase in the first property's value from price appreciation alone, separate from principal paydown.",
+    holdEquity: "Property value minus remaining mortgage on the first property, assuming you keep holding it and do not sell.",
+    costToSell: "Estimated selling friction for the first property, using the current sell-cost percentage. This reduces liquidation proceeds.",
+    liquidationEquity: "Cash equity from the first property after subtracting the remaining mortgage and estimated selling costs.",
+    phase2Section: "Additional property metrics that appear when Phase 2 is set to buy a second home.",
+    phase2HomeValue: "Projected market value of the Phase 2 home at the end of the projection.",
+    phase2RemainingMortgage: "Mortgage balance still owed on the Phase 2 home at the end of the projection.",
+    phase2HoldEquity: "Phase 2 home value minus the remaining Phase 2 mortgage, before selling costs.",
+    phase2CostToSell: "Estimated selling friction for the Phase 2 home using the current sell-cost percentage.",
+    phase2LiquidationEquity: "Cash equity from the Phase 2 home after subtracting its mortgage balance and selling costs.",
+    combinedHoldEquity: "Total unsold real-estate equity across both owned properties in the Phase 2 buy path.",
+    totalRentCollected: "Total gross rent received by Option A over the full projection, combining the house-hack and post-move-out periods.",
+    totalRentPaid: "Total rent paid by Option B over the full projection horizon.",
+    taxSavings: "Annual depreciation tax savings added to Option A's cash flow when the tax-benefit slider is above zero.",
+    investmentPortfolio: "Value of invested leftover cash and monthly surpluses at the end of the projection.",
+    holdNetWorth: "Ending net worth if Option A keeps the property or properties instead of selling. Compared against Option B's invested portfolio.",
+    liquidationNetWorth: "Ending net worth if Option A sells its property or properties at the end and pays the modeled selling costs.",
+    roiSection: "Return metrics measured against your original starting capital.",
+    totalGain: "Ending net worth minus starting capital. This is the raw dollar profit or loss over the projection.",
+    totalRoi: "Total gain divided by starting capital, shown as a percentage.",
+    annualizedRoi: "Compound annual growth rate implied by the ending value and the starting capital over the selected number of years.",
+    wealthMultiple: "How many times your starting capital grows by the end of the projection."
+  };
 
   // ── HOUSE-HACK CALC ──
   const calcBuy = (price, rent, fullRent, repairs, appRate, rentGrowth) => {
@@ -787,54 +830,54 @@ export default function App() {
             <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: COLORS.B, fontFamily: "var(--mono)", textAlign: "center" }}>B: RENT+S&P</div>
           </div>
 
-          <Row3 label="UPFRONT CAPITAL ALLOCATION" section />
-          <Row3 label="Cash to Close" vals={[a.cashToClose, 0]} winIdx={wLow(a.cashToClose, 0)} />
-          <Row3 label="Buy Closing Costs" vals={[a.buyClosingCosts, 0]} winIdx={wLow(a.buyClosingCosts, 0)} />
-          <Row3 label="Emergency Fund (set aside)" vals={[a.emergencyFund, 0]} winIdx={wLow(a.emergencyFund, 0)} />
-          <Row3 label="Leftover Capital → Invested Day 1" vals={[a.leftoverCapital, startingCapital]} winIdx={wHigh(a.leftoverCapital, startingCapital)} highlight />
+          <Row3 label="UPFRONT CAPITAL ALLOCATION" section tooltip={metricTooltips.upfrontSection} />
+          <Row3 label="Cash to Close" vals={[a.cashToClose, 0]} winIdx={wLow(a.cashToClose, 0)} tooltip={metricTooltips.cashToClose} />
+          <Row3 label="Buy Closing Costs" vals={[a.buyClosingCosts, 0]} winIdx={wLow(a.buyClosingCosts, 0)} tooltip={metricTooltips.buyClosingCostsMetric} />
+          <Row3 label="Emergency Fund (set aside)" vals={[a.emergencyFund, 0]} winIdx={wLow(a.emergencyFund, 0)} tooltip={metricTooltips.emergencyFund} />
+          <Row3 label="Leftover Capital → Invested Day 1" vals={[a.leftoverCapital, startingCapital]} winIdx={wHigh(a.leftoverCapital, startingCapital)} highlight tooltip={metricTooltips.leftoverCapital} />
 
-          <Row3 label="MONTHLY PICTURE (YEAR 1)" section />
-          <Row3 label="Mortgage PITI" vals={[a.totalPITI, null]} />
-          <Row3 label="HOA Fees" vals={[a.hoaYear1, 0]} />
-          <Row3 label="Rent Paid" vals={[null, monthlyRent]} />
-          <Row3 label="Effective Rental Income" vals={[a.effectiveRentYear1, null]} />
+          <Row3 label="MONTHLY PICTURE (YEAR 1)" section tooltip={metricTooltips.monthlySection} />
+          <Row3 label="Mortgage PITI" vals={[a.totalPITI, null]} tooltip={metricTooltips.mortgagePiti} />
+          <Row3 label="HOA Fees" vals={[a.hoaYear1, 0]} tooltip={metricTooltips.hoaFees} />
+          <Row3 label="Rent Paid" vals={[null, monthlyRent]} tooltip={metricTooltips.rentPaid} />
+          <Row3 label="Effective Rental Income" vals={[a.effectiveRentYear1, null]} tooltip={metricTooltips.effectiveRentalIncome} />
           <Row3 label="Housing % of Take-Home" vals={[a.housingPctGross, b.housingPctGross]}
-            fmtFn={v => v.toFixed(1) + "%"} winIdx={wLow(a.housingPctGross, b.housingPctGross)} highlight />
-          <Row3 label="Net Housing Cost" vals={[a.netHousing, b.netHousing]} winIdx={wLow(a.netHousing, b.netHousing)} highlight />
-          <Row3 label="Total Monthly Expenses" vals={[a.totalExpenses, b.totalExpenses]} winIdx={wLow(a.totalExpenses, b.totalExpenses)} />
-          <Row3 label="Monthly Surplus → Invest" vals={[a.surplus, b.surplus]} winIdx={wHigh(a.surplus, b.surplus)} highlight />
-          <Row3 label="Surplus / Check" vals={[a.surplusChk, b.surplusChk]} winIdx={wHigh(a.surplusChk, b.surplusChk)} />
+            fmtFn={v => v.toFixed(1) + "%"} winIdx={wLow(a.housingPctGross, b.housingPctGross)} highlight tooltip={metricTooltips.housingPct} />
+          <Row3 label="Net Housing Cost" vals={[a.netHousing, b.netHousing]} winIdx={wLow(a.netHousing, b.netHousing)} highlight tooltip={metricTooltips.netHousing} />
+          <Row3 label="Total Monthly Expenses" vals={[a.totalExpenses, b.totalExpenses]} winIdx={wLow(a.totalExpenses, b.totalExpenses)} tooltip={metricTooltips.totalExpenses} />
+          <Row3 label="Monthly Surplus → Invest" vals={[a.surplus, b.surplus]} winIdx={wHigh(a.surplus, b.surplus)} highlight tooltip={metricTooltips.monthlySurplus} />
+          <Row3 label="Surplus / Check" vals={[a.surplusChk, b.surplusChk]} winIdx={wHigh(a.surplusChk, b.surplusChk)} tooltip={metricTooltips.surplusCheck} />
 
-          <Row3 label={`${years}-YEAR OUTCOME`} section />
-          <Row3 label="Home Value (Property 1)" vals={[a.homeValue, null]} />
-          <Row3 label="Remaining Mortgage (Property 1)" vals={[a.balance, null]} />
-          <Row3 label="Principal Paid (equity earned)" vals={[a.principalPaid, null]} />
-          <Row3 label="Appreciation Gain" vals={[a.appreciationGain, null]} />
-          <Row3 label="Hold Equity (Property 1)" vals={[a.grossEquity, 0]} winIdx={wHigh(a.grossEquity, 0)} highlight />
-          <Row3 label={`Cost to Sell (${sellingCostPct}%)`} vals={[-a.sellingCost, 0]} winIdx={1} flipColor />
-          <Row3 label="Liquidation Equity (Property 1)" vals={[a.netEquityLiq, 0]} winIdx={wHigh(a.netEquityLiq, 0)} />
+          <Row3 label={`${years}-YEAR OUTCOME`} section tooltip={metricTooltips.outcomeSection} />
+          <Row3 label="Home Value (Property 1)" vals={[a.homeValue, null]} tooltip={metricTooltips.homeValue} />
+          <Row3 label="Remaining Mortgage (Property 1)" vals={[a.balance, null]} tooltip={metricTooltips.remainingMortgage} />
+          <Row3 label="Principal Paid (equity earned)" vals={[a.principalPaid, null]} tooltip={metricTooltips.principalPaid} />
+          <Row3 label="Appreciation Gain" vals={[a.appreciationGain, null]} tooltip={metricTooltips.appreciationGain} />
+          <Row3 label="Hold Equity (Property 1)" vals={[a.grossEquity, 0]} winIdx={wHigh(a.grossEquity, 0)} highlight tooltip={metricTooltips.holdEquity} />
+          <Row3 label={`Cost to Sell (${sellingCostPct}%)`} vals={[-a.sellingCost, 0]} winIdx={1} flipColor tooltip={metricTooltips.costToSell} />
+          <Row3 label="Liquidation Equity (Property 1)" vals={[a.netEquityLiq, 0]} winIdx={wHigh(a.netEquityLiq, 0)} tooltip={metricTooltips.liquidationEquity} />
           {phase2Mode === 'buy' && years > hackYears && (
             <>
-              <Row3 label="PHASE 2 PROPERTY" section />
-              <Row3 label="Phase 2 Home Value" vals={[a.p2HomeValue, null]} />
-              <Row3 label="Phase 2 Remaining Mortgage" vals={[a.p2Balance, null]} />
-              <Row3 label="Phase 2 Hold Equity" vals={[a.p2NetEquity, 0]} winIdx={wHigh(a.p2NetEquity, 0)} highlight />
-              <Row3 label={`Phase 2 Cost to Sell (${sellingCostPct}%)`} vals={[-a.p2SellingCost, 0]} winIdx={1} flipColor />
-              <Row3 label="Phase 2 Liquidation Equity" vals={[a.p2NetEquityLiq, 0]} winIdx={wHigh(a.p2NetEquityLiq, 0)} />
-              <Row3 label="Combined Hold Equity" vals={[a.netEquity + a.p2NetEquity, 0]} winIdx={wHigh(a.netEquity + a.p2NetEquity, 0)} highlight />
+              <Row3 label="PHASE 2 PROPERTY" section tooltip={metricTooltips.phase2Section} />
+              <Row3 label="Phase 2 Home Value" vals={[a.p2HomeValue, null]} tooltip={metricTooltips.phase2HomeValue} />
+              <Row3 label="Phase 2 Remaining Mortgage" vals={[a.p2Balance, null]} tooltip={metricTooltips.phase2RemainingMortgage} />
+              <Row3 label="Phase 2 Hold Equity" vals={[a.p2NetEquity, 0]} winIdx={wHigh(a.p2NetEquity, 0)} highlight tooltip={metricTooltips.phase2HoldEquity} />
+              <Row3 label={`Phase 2 Cost to Sell (${sellingCostPct}%)`} vals={[-a.p2SellingCost, 0]} winIdx={1} flipColor tooltip={metricTooltips.phase2CostToSell} />
+              <Row3 label="Phase 2 Liquidation Equity" vals={[a.p2NetEquityLiq, 0]} winIdx={wHigh(a.p2NetEquityLiq, 0)} tooltip={metricTooltips.phase2LiquidationEquity} />
+              <Row3 label="Combined Hold Equity" vals={[a.netEquity + a.p2NetEquity, 0]} winIdx={wHigh(a.netEquity + a.p2NetEquity, 0)} highlight tooltip={metricTooltips.combinedHoldEquity} />
             </>
           )}
-          <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} />
-          <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} />
-          {a.annualTaxBenefit > 0 && <Row3 label="Tax Savings (Depreciation) / yr" vals={[a.annualTaxBenefit, 0]} winIdx={wHigh(a.annualTaxBenefit, 0)} />}
-          <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight />
-          <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight />
-          <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} />
-          <Row3 label="ROI" section />
-          <Row3 label="Total Gain" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} winIdx={wHigh(a.totalWealth - startingCapital, b.totalWealth - startingCapital)} />
-          <Row3 label="Total ROI %" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} fmtFn={v => `${(v / startingCapital * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} />
-          <Row3 label={`Annualized ROI (${years}yr CAGR)`} vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${((Math.pow(v / startingCapital, 1 / years) - 1) * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} />
-          <Row3 label="Wealth Multiple" vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${(v / startingCapital).toFixed(2)}x`} winIdx={wHigh(a.totalWealth, b.totalWealth)} highlight />
+          <Row3 label="Total Rent Collected" vals={[a.totalRentCollected, null]} tooltip={metricTooltips.totalRentCollected} />
+          <Row3 label="Total Rent Paid" vals={[0, b.totalRentPaid]} fmtFn={v => v === 0 ? "$0" : fmt(-v)} winIdx={0} tooltip={metricTooltips.totalRentPaid} />
+          {a.annualTaxBenefit > 0 && <Row3 label="Tax Savings (Depreciation) / yr" vals={[a.annualTaxBenefit, 0]} winIdx={wHigh(a.annualTaxBenefit, 0)} tooltip={metricTooltips.taxSavings} />}
+          <Row3 label="Investment Portfolio" vals={[a.portfolioValue, b.portfolioValue]} winIdx={wHigh(a.portfolioValue, b.portfolioValue)} highlight tooltip={metricTooltips.investmentPortfolio} />
+          <Row3 label="HOLD NET WORTH" vals={[a.totalWealth, b.totalWealth]} winIdx={winIdx} highlight tooltip={metricTooltips.holdNetWorth} />
+          <Row3 label="LIQUIDATION NET WORTH" vals={[a.totalWealthLiq, b.totalWealth]} winIdx={wHigh(a.totalWealthLiq, b.totalWealth)} tooltip={metricTooltips.liquidationNetWorth} />
+          <Row3 label="ROI" section tooltip={metricTooltips.roiSection} />
+          <Row3 label="Total Gain" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} winIdx={wHigh(a.totalWealth - startingCapital, b.totalWealth - startingCapital)} tooltip={metricTooltips.totalGain} />
+          <Row3 label="Total ROI %" vals={[a.totalWealth - startingCapital, b.totalWealth - startingCapital]} fmtFn={v => `${(v / startingCapital * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} tooltip={metricTooltips.totalRoi} />
+          <Row3 label={`Annualized ROI (${years}yr CAGR)`} vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${((Math.pow(v / startingCapital, 1 / years) - 1) * 100).toFixed(1)}%`} winIdx={wHigh(a.totalWealth, b.totalWealth)} tooltip={metricTooltips.annualizedRoi} />
+          <Row3 label="Wealth Multiple" vals={[a.totalWealth, b.totalWealth]} fmtFn={v => `${(v / startingCapital).toFixed(2)}x`} winIdx={wHigh(a.totalWealth, b.totalWealth)} highlight tooltip={metricTooltips.wealthMultiple} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", padding: "10px 12px",
             background: `${BGS[winLabel]}0.05)`, borderTop: `2px solid ${BGS[winLabel]}0.2)` }}>
