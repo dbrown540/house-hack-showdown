@@ -3,9 +3,8 @@
 // Unit 1 — Baseline regression suite for the House-Hack Showdown v5 engine.
 // Uses only Node.js built-ins (no test framework required).
 //
-// Status: all tests PASS except the explicitly labeled pmt(0) test,
-// which is EXPECTED FAIL until Unit 2 fixes the zero-rate branch in
-// scripts/engine.cjs and src/utils/math.js.
+// Status: this suite is expected to pass in full when the engine and
+// defaults are in sync.
 //
 // Usage:
 //   node scripts/tests.cjs          # run all tests, exit 1 if any fail
@@ -74,9 +73,9 @@ test('compare() returns defined result object', () => {
   assert.ok(typeof result.neverBuy.totalWealth === 'number', 'B totalWealth is a number');
 });
 
-test('default params: A totalWealth = $1,025,848', () => {
+test('default params: A totalWealth = $1,028,063', () => {
   const result = compare(defaults);
-  near(result.houseHack.totalWealth, 1025848, 1, 'A totalWealth ');
+  near(result.houseHack.totalWealth, 1028063, 1, 'A totalWealth ');
 });
 
 test('default params: B totalWealth = $930,576', () => {
@@ -89,9 +88,9 @@ test('default params: winner = House-Hack', () => {
   assert.strictEqual(result.winner, 'House-Hack');
 });
 
-test('default params: spBreakeven = 11.7%', () => {
+test('default params: spBreakeven = 11.8%', () => {
   const result = compare(defaults);
-  near(result.spBreakeven, 11.7, 0.1, 'spBreakeven ');
+  near(result.spBreakeven, 11.8, 0.05, 'spBreakeven ');
 });
 
 test('default params: yearlyData has years+1 entries (0..N)', () => {
@@ -289,25 +288,12 @@ test('Phase 2 rent transition: fullRent applied with no growth in first Phase 2 
 
 console.log('\n─── 6. Edge cases ───');
 
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │  EXPECTED FAIL BEFORE FIX                                               │
-// │                                                                         │
-// │  pmt(0, 30, 300000) currently returns 10000 (annual, not monthly).      │
-// │  After the Unit 2 fix (return pv / (nper * 12)), it should return       │
-// │  300000 / 360 = 833.333...                                              │
-// │                                                                         │
-// │  Pre-fix value:  10000  (pv / nper, an annual payment — BUG)           │
-// │  Post-fix expected: 833.33  (pv / (nper * 12), correct monthly)        │
-// │                                                                         │
-// │  Note: the UI rate slider minimum is 4% (per SKILLS.md), so            │
-// │  rate=0 is unreachable through the UI — this bug only affects CLI use. │
-// └─────────────────────────────────────────────────────────────────────────┘
-test('pmt(0) returns monthly payment pv/(nper*12)  [EXPECTED FAIL before fix]', () => {
+test('pmt(0) returns monthly payment pv/(nper*12)', () => {
   const expected = 300000 / (30 * 12);   // 833.333...
   near(pmt(0, 30, 300000), expected, 0.01, 'pmt(0,30,300000) ');
 });
 
-test('pmt(0, 1, 12000) = 1000 (monthly, 1-year zero-rate loan)  [EXPECTED FAIL before fix]', () => {
+test('pmt(0, 1, 12000) = 1000 (monthly, 1-year zero-rate loan)', () => {
   near(pmt(0, 1, 12000), 1000, 0.01, 'pmt(0,1,12000) ');
 });
 
@@ -317,7 +303,7 @@ test('pmt() non-zero rate unchanged by fix: pmt(0.05875, 30, 291000) ≈ $1,721'
 });
 
 test('Underfunded A: startingCapital=10000 → underfunded=true, portfolioValue=0 at year 0', () => {
-  // cashToClose=18000, emergencyFund=3000 → leftoverCapital = 10000 - 21000 = -11000
+  // Underfunded when starting capital cannot cover cash-to-close + month-based emergency reserve.
   const a = calcBuy(mkBuyParams({ startingCapital: 10000 }));
   assert.ok(a.underfunded === true, `underfunded should be true`);
   assert.ok(a.leftoverCapital < 0, `leftoverCapital should be negative`);
@@ -460,15 +446,61 @@ test('defensive guard: negative taxBenefitPct clamped to 0', () => {
     'negative taxBenefitPct should not reduce totalWealth below taxBenefitPct=0');
 });
 
+// ── SECTION 10: EMERGENCY FUND (MONTHS-BASED) ───────────────────────────────
+
+console.log('\n─── 10. Emergency fund (months-based) ───');
+
+test('emergencyMonths=0 sets emergencyFund=0 (Phase 1)', () => {
+  const a = calcBuy(mkBuyParams({ emergencyMonths: 0 }));
+  assert.strictEqual(a.emergencyFund, 0, `emergencyFund should be 0 when emergencyMonths=0`);
+});
+
+test('emergencyFund scales upward with emergencyMonths (Phase 1)', () => {
+  const a1 = calcBuy(mkBuyParams({ emergencyMonths: 1 }));
+  const a3 = calcBuy(mkBuyParams({ emergencyMonths: 3 }));
+  assert.ok(a3.emergencyFund > a1.emergencyFund,
+    `emergencyFund should increase with months: 1mo=${a1.emergencyFund}, 3mo=${a3.emergencyFund}`);
+  near(a3.emergencyFund / 3, a1.emergencyFund, 2,
+    'Phase 1 emergency fund should scale linearly by months ');
+});
+
+test('emergencyFund is based on expenses, not directly on home price', () => {
+  // Hold monthly expenses effectively constant while changing price.
+  const shared = {
+    emergencyMonths: 1,
+    downPct: 100,
+    taxPct: 0,
+    insPct: 0,
+    pmiRate: 0,
+  };
+  const lowPrice = calcBuy(mkBuyParams({ ...shared, pA: 200000 }));
+  const highPrice = calcBuy(mkBuyParams({ ...shared, pA: 600000 }));
+  assert.strictEqual(lowPrice.emergencyFund, highPrice.emergencyFund,
+    `emergencyFund should match when expenses match: low=${lowPrice.emergencyFund}, high=${highPrice.emergencyFund}`);
+});
+
+test('Phase 2 emergency fund increases with inflation (groceries+gas are inflated)', () => {
+  // At transition year (hackYears+1), the month-based reserve uses transition expenses,
+  // which include inflated living costs (weeklyCost -> livingMonthly * inflFactor).
+  const base = {
+    ...defaults,
+    phase2Mode: 'buy',
+    years: 10,
+    hackYears: 5,
+    emergencyMonths: 1,
+  };
+  const lowInfl = calcBuy(mkBuyParams({ ...base, inflationRate: 0 }));
+  const highInfl = calcBuy(mkBuyParams({ ...base, inflationRate: 6 }));
+  assert.ok(highInfl.p2EmergencyFund > lowInfl.p2EmergencyFund,
+    `p2EmergencyFund should rise with inflation: low=${lowInfl.p2EmergencyFund}, high=${highInfl.p2EmergencyFund}`);
+});
+
 // ── SUMMARY ───────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
 console.log(`  ${passed} passed  /  ${failed} failed  /  ${passed + failed} total`);
 if (failed > 0) {
-  console.log(`\n  Note: ${failed === 1 && failed === 1
-    ? '1 failure is'
-    : `${failed} failures are`} expected before Unit 2 fixes pmt(0).`);
-  console.log('  Re-run after patching pmt() to confirm all tests pass.\n');
+  console.log('\n  Re-run after fixing the failures above.\n');
   process.exit(1);
 }
 console.log('  All tests pass.\n');

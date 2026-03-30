@@ -39,7 +39,7 @@ function calcBuy(params) {
   const {
     startingCapital, takeHome, weeklyCost,
     downPct, rate, taxPct, insPct, pmiRate, buyClosingCostPct,
-    utilities, hoa, maintVacancyPct, emergencyPct, sellingCostPct,
+    utilities, hoa, maintVacancyPct, emergencyMonths, sellingCostPct,
     inflationRate, investRet, hackYears, years, tenantPaysUtils,
     phase2Mode, phase2Utils, phase2Rent, phase2RentGrowth, phase2RenterIns,
     phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate,
@@ -52,6 +52,7 @@ function calcBuy(params) {
   const livingMonthly = weeklyCost * 52 / 12;
   const monthlyIncome = takeHome * 2;
   const r = investRet / 100;
+  const efMonths = Math.max(0, emergencyMonths || 0);
 
   const down = Math.round(price * downPct / 100);
   const loan = price - down;
@@ -61,15 +62,15 @@ function calcBuy(params) {
   const totalPITI = monthlyPI + monthlyTax + monthlyIns;
 
   const buyClosingCosts = Math.round(price * (buyClosingCostPct / 100));
-  const emergencyFund = Math.round(price * emergencyPct / 100);
   const cashToClose = down + repairs + buyClosingCosts;
-  const leftoverCapital = startingCapital - cashToClose - emergencyFund;
 
   // Phase 1 (house-hack) year 1 snapshot
   const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
   const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
   const netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities;
   const totalExpenses = netHousing + livingMonthly;
+  const emergencyFund = Math.round(Math.max(0, totalExpenses * efMonths));
+  const leftoverCapital = startingCapital - cashToClose - emergencyFund;
   const surplus = monthlyIncome - totalExpenses;
   const housingPctGross = netHousing / monthlyIncome * 100;
 
@@ -124,15 +125,11 @@ function calcBuy(params) {
     if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
       p2Down = Math.round(phase2Price * phase2DownPct / 100);
       p2ClosingCosts = Math.round(phase2Price * (buyClosingCostPct / 100));
-      p2EmergencyFund = Math.round(phase2Price * emergencyPct / 100);
       p2Loan = phase2Price - p2Down;
       p2MonthlyPI = pmt(phase2MortRate / 100, 30, p2Loan);
       p2BaseTax = Math.round(phase2Price * phase2TaxPct / 100 / 12);
       p2BaseIns = Math.round(phase2Price * phase2InsPct / 100 / 12);
       p2Balance = p2Loan;
-      const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
-      p2Underfunded = portfolioValue < p2TotalCash;
-      portfolioValue -= p2TotalCash;
     }
 
     // Pay down Phase 2 mortgage
@@ -163,6 +160,13 @@ function calcBuy(params) {
 
     const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
     const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
+    if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
+      const transitionTotalExpenses = curNet + curLiving;
+      p2EmergencyFund = Math.round(Math.max(0, transitionTotalExpenses * efMonths));
+      const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
+      p2Underfunded = portfolioValue < p2TotalCash;
+      portfolioValue -= p2TotalCash;
+    }
     const curSurplus = curTakeHome - (curNet + curLiving);
     // annualTaxBenefit added after curSurplus is computed; does not affect surplus display value
     portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2);
