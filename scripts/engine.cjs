@@ -69,7 +69,8 @@ function calcBuy(params) {
   const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
   const netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities;
   const totalExpenses = netHousing + livingMonthly;
-  const emergencyFund = Math.round(Math.max(0, totalExpenses * efMonths));
+  const vacancyCarryMonthly = totalPITI + initialPMI + hoa + utilities;
+  const emergencyFund = Math.round(Math.max(0, vacancyCarryMonthly * efMonths));
   const leftoverCapital = startingCapital - cashToClose - emergencyFund;
   const surplus = monthlyIncome - totalExpenses;
   const housingPctGross = netHousing / monthlyIncome * 100;
@@ -161,8 +162,9 @@ function calcBuy(params) {
     const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
     const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
     if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
-      const transitionTotalExpenses = curNet + curLiving;
-      p2EmergencyFund = Math.round(Math.max(0, transitionTotalExpenses * efMonths));
+      const p2InitialPMI = phase2DownPct < 20 ? (phase2PmiRate / 100) * p2Loan / 12 : 0;
+      const p2VacancyCarryMonthly = p2MonthlyPI + p2BaseTax + p2BaseIns + phase2Hoa + p2InitialPMI + phase2Utils;
+      p2EmergencyFund = Math.round(Math.max(0, p2VacancyCarryMonthly * efMonths));
       const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
       p2Underfunded = portfolioValue < p2TotalCash;
       portfolioValue -= p2TotalCash;

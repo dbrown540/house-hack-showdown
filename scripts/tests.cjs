@@ -73,9 +73,9 @@ test('compare() returns defined result object', () => {
   assert.ok(typeof result.neverBuy.totalWealth === 'number', 'B totalWealth is a number');
 });
 
-test('default params: A totalWealth = $1,028,063', () => {
+test('default params: A totalWealth = $1,026,442', () => {
   const result = compare(defaults);
-  near(result.houseHack.totalWealth, 1028063, 1, 'A totalWealth ');
+  near(result.houseHack.totalWealth, 1026442, 1, 'A totalWealth ');
 });
 
 test('default params: B totalWealth = $930,576', () => {
@@ -88,9 +88,9 @@ test('default params: winner = House-Hack', () => {
   assert.strictEqual(result.winner, 'House-Hack');
 });
 
-test('default params: spBreakeven = 11.8%', () => {
+test('default params: spBreakeven = 11.7%', () => {
   const result = compare(defaults);
-  near(result.spBreakeven, 11.8, 0.05, 'spBreakeven ');
+  near(result.spBreakeven, 11.7, 0.05, 'spBreakeven ');
 });
 
 test('default params: yearlyData has years+1 entries (0..N)', () => {
@@ -446,9 +446,9 @@ test('defensive guard: negative taxBenefitPct clamped to 0', () => {
     'negative taxBenefitPct should not reduce totalWealth below taxBenefitPct=0');
 });
 
-// ── SECTION 10: EMERGENCY FUND (MONTHS-BASED) ───────────────────────────────
+// ── SECTION 10: EMERGENCY FUND (VACANCY MONTHS) ─────────────────────────────
 
-console.log('\n─── 10. Emergency fund (months-based) ───');
+console.log('\n─── 10. Emergency fund (vacancy months) ───');
 
 test('emergencyMonths=0 sets emergencyFund=0 (Phase 1)', () => {
   const a = calcBuy(mkBuyParams({ emergencyMonths: 0 }));
@@ -464,35 +464,26 @@ test('emergencyFund scales upward with emergencyMonths (Phase 1)', () => {
     'Phase 1 emergency fund should scale linearly by months ');
 });
 
-test('emergencyFund is based on expenses, not directly on home price', () => {
-  // Hold monthly expenses effectively constant while changing price.
-  const shared = {
-    emergencyMonths: 1,
-    downPct: 100,
-    taxPct: 0,
-    insPct: 0,
-    pmiRate: 0,
-  };
-  const lowPrice = calcBuy(mkBuyParams({ ...shared, pA: 200000 }));
-  const highPrice = calcBuy(mkBuyParams({ ...shared, pA: 600000 }));
-  assert.strictEqual(lowPrice.emergencyFund, highPrice.emergencyFund,
-    `emergencyFund should match when expenses match: low=${lowPrice.emergencyFund}, high=${highPrice.emergencyFund}`);
+test('emergencyFund assumes complete vacancy (rent level does not change reserve)', () => {
+  const noRent = calcBuy(mkBuyParams({ emergencyMonths: 1, rA: 0 }));
+  const highRent = calcBuy(mkBuyParams({ emergencyMonths: 1, rA: 2500 }));
+  assert.strictEqual(noRent.emergencyFund, highRent.emergencyFund,
+    `emergencyFund should ignore rent during vacancy: noRent=${noRent.emergencyFund}, highRent=${highRent.emergencyFund}`);
 });
 
-test('Phase 2 emergency fund increases with inflation (groceries+gas are inflated)', () => {
-  // At transition year (hackYears+1), the month-based reserve uses transition expenses,
-  // which include inflated living costs (weeklyCost -> livingMonthly * inflFactor).
-  const base = {
-    ...defaults,
-    phase2Mode: 'buy',
-    years: 10,
-    hackYears: 5,
-    emergencyMonths: 1,
-  };
-  const lowInfl = calcBuy(mkBuyParams({ ...base, inflationRate: 0 }));
-  const highInfl = calcBuy(mkBuyParams({ ...base, inflationRate: 6 }));
-  assert.ok(highInfl.p2EmergencyFund > lowInfl.p2EmergencyFund,
-    `p2EmergencyFund should rise with inflation: low=${lowInfl.p2EmergencyFund}, high=${highInfl.p2EmergencyFund}`);
+test('emergencyFund includes utilities cost', () => {
+  const lowUtils = calcBuy(mkBuyParams({ emergencyMonths: 1, utilities: 200 }));
+  const highUtils = calcBuy(mkBuyParams({ emergencyMonths: 1, utilities: 900 }));
+  assert.ok(highUtils.emergencyFund > lowUtils.emergencyFund,
+    `emergencyFund should increase with utilities: low=${lowUtils.emergencyFund}, high=${highUtils.emergencyFund}`);
+});
+
+test('Phase 2 emergency fund is based on Phase 2 carrying costs, not living spend/inflation', () => {
+  const base = { phase2Mode: 'buy', years: 10, hackYears: 5, emergencyMonths: 1 };
+  const lowInflHighLiving = calcBuy(mkBuyParams({ ...base, inflationRate: 0, weeklyCost: 200 }));
+  const highInflLowLiving = calcBuy(mkBuyParams({ ...base, inflationRate: 6, weeklyCost: 50 }));
+  assert.strictEqual(lowInflHighLiving.p2EmergencyFund, highInflLowLiving.p2EmergencyFund,
+    `p2EmergencyFund should ignore living/inflation inputs: a=${lowInflHighLiving.p2EmergencyFund}, b=${highInflLowLiving.p2EmergencyFund}`);
 });
 
 // ── SUMMARY ───────────────────────────────────────────────────────────────────
