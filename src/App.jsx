@@ -822,7 +822,7 @@ export default function App() {
 
         {/* TABLE */}
         <div style={{ background: "rgba(255,255,255,0.012)", border: "1px solid rgba(255,255,255,0.04)",
-          borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
+          borderRadius: 10, overflow: "visible", marginBottom: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", padding: "10px 12px",
             borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
             <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,0.2)", fontFamily: "var(--mono)" }}>METRIC</div>
