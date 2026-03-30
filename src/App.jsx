@@ -91,7 +91,8 @@ export default function App() {
     const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
     const netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
-    const emergencyFund = Math.round(Math.max(0, totalExpenses * emergencyMonths));
+    const vacancyCarryMonthly = totalPITI + initialPMI + hoa + utilities;
+    const emergencyFund = Math.round(Math.max(0, vacancyCarryMonthly * emergencyMonths));
     const leftoverCapital = startingCapital - cashToClose - emergencyFund;
     const surplus = monthlyIncome - totalExpenses;
     const housingPctGross = netHousing / monthlyIncome * 100;
@@ -186,8 +187,9 @@ export default function App() {
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
       const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
       if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
-        const transitionTotalExpenses = curNet + curLiving;
-        p2EmergencyFund = Math.round(Math.max(0, transitionTotalExpenses * emergencyMonths));
+        const p2InitialPMI = phase2DownPct < 20 ? (phase2PmiRate / 100) * p2Loan / 12 : 0;
+        const p2VacancyCarryMonthly = p2MonthlyPI + p2BaseTax + p2BaseIns + phase2Hoa + p2InitialPMI + phase2Utils;
+        p2EmergencyFund = Math.round(Math.max(0, p2VacancyCarryMonthly * emergencyMonths));
         const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
         p2Underfunded = portfolioValue < p2TotalCash;
         portfolioValue -= p2TotalCash;
@@ -422,7 +424,7 @@ export default function App() {
             <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" tooltip="Monthly water, gas, trash, and shared-area utility costs for the property. May be split with your tenant if they pay utilities." />
             <Slider label="HOA / Mo (Property 1)" value={hoa} onChange={setHoa} min={0} max={1200} step={25} color="#fff" tooltip="Monthly homeowners association fee, if applicable. Covers shared amenities and common-area maintenance. Set to $0 if no HOA." />
             <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" tooltip="Percentage of rental income set aside monthly for repairs, maintenance, and vacant months between tenants. A common landlord rule of thumb is 8–12%." />
-            <Slider label="Emergency Coverage (Months)" value={emergencyMonths} onChange={setEmergencyMonths} min={0} max={6} step={1} prefix="" suffix=" mo" color="#fff" tooltip="Cash reserve held outside your portfolio for unexpected costs. Calculated as total monthly expenses multiplied by this number of months." />
+            <Slider label="Emergency Coverage (Months)" value={emergencyMonths} onChange={setEmergencyMonths} min={0} max={6} step={1} prefix="" suffix=" mo" color="#fff" tooltip="Cash reserve held outside your portfolio for complete vacancy. Calculated as monthly property carrying costs plus utilities, multiplied by this many months (rent assumed $0 during vacancy)." />
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Agent commissions and closing costs when you eventually sell the property. Deducted from final sale proceeds when calculating terminal wealth." />
           </div>
 
