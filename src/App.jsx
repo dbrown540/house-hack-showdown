@@ -29,7 +29,7 @@ export default function App() {
   const [utilities, setUtilities] = useState(500);
   const [hoa, setHoa] = useState(0);
   const [maintVacancyPct, setMaintVacancyPct] = useState(5);
-  const [emergencyPct, setEmergencyPct] = useState(1);
+  const [emergencyMonths, setEmergencyMonths] = useState(1);
   const [sellingCostPct, setSellingCostPct] = useState(5);
 
   // ── MARKET & TIMING ──
@@ -84,15 +84,15 @@ export default function App() {
     const totalPITI = monthlyPI + monthlyTax + monthlyIns;
 
     const buyClosingCosts = Math.round(price * (buyClosingCostPct / 100));
-    const emergencyFund = Math.round(price * emergencyPct / 100);
     const cashToClose = down + repairs + buyClosingCosts;
-    const leftoverCapital = startingCapital - cashToClose - emergencyFund;
 
     // Phase 1 (house-hack) year 1 snapshot
     const effectiveRentYear1 = rent * (1 - maintVacancyPct / 100);
     const initialPMI = downPct < 20 ? (pmiRate / 100) * loan / 12 : 0;
     const netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities;
     const totalExpenses = netHousing + livingMonthly;
+    const emergencyFund = Math.round(Math.max(0, totalExpenses * emergencyMonths));
+    const leftoverCapital = startingCapital - cashToClose - emergencyFund;
     const surplus = monthlyIncome - totalExpenses;
     const housingPctGross = netHousing / monthlyIncome * 100;
 
@@ -150,15 +150,11 @@ export default function App() {
       if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
         p2Down = Math.round(phase2Price * phase2DownPct / 100);
         p2ClosingCosts = Math.round(phase2Price * (buyClosingCostPct / 100));
-        p2EmergencyFund = Math.round(phase2Price * emergencyPct / 100);
         p2Loan = phase2Price - p2Down;
         p2MonthlyPI = pmt(phase2MortRate / 100, 30, p2Loan);
         p2BaseTax = Math.round(phase2Price * phase2TaxPct / 100 / 12);
         p2BaseIns = Math.round(phase2Price * phase2InsPct / 100 / 12);
         p2Balance = p2Loan;
-        const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
-        p2Underfunded = portfolioValue < p2TotalCash;
-        portfolioValue -= p2TotalCash;
       }
 
       // Pay down Phase 2 mortgage
@@ -189,6 +185,13 @@ export default function App() {
 
       const ownerUtils = (inHackPhase || !tenantPaysUtils) ? curUtils : 0;
       const curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns;
+      if (!inHackPhase && phase2Mode === 'buy' && y === hackYears + 1) {
+        const transitionTotalExpenses = curNet + curLiving;
+        p2EmergencyFund = Math.round(Math.max(0, transitionTotalExpenses * emergencyMonths));
+        const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
+        p2Underfunded = portfolioValue < p2TotalCash;
+        portfolioValue -= p2TotalCash;
+      }
       const curSurplus = curTakeHome - (curNet + curLiving);
       // Mid-year approximation: existing balance gets full-year return,
       // new contributions get half-year return on average.
@@ -313,7 +316,7 @@ export default function App() {
     };
   };
 
-  const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyPct, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Utils, phase2RenterIns, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
+  const deps = [takeHome, weeklyCost, utilities, hoa, startingCapital, downPct, buyClosingCostPct, rate, taxPct, insPct, investRet, inflationRate, years, maintVacancyPct, sellingCostPct, emergencyMonths, hackYears, tenantPaysUtils, phase2Rent, phase2RentGrowth, phase2Utils, phase2RenterIns, phase2Mode, phase2Price, phase2DownPct, phase2MortRate, phase2PmiRate, phase2App, phase2TaxPct, phase2InsPct, phase2Hoa, monthlyRent, rentInflation, pmiRate, renterUtils];
   const a = useMemo(() => calcBuy(pA, rA, fullRentA, repA, appA, rgA), [pA, rA, fullRentA, repA, appA, rgA, taxBenefitPctA, ...deps]);
   const b = useMemo(() => calcNeverBuy(), [monthlyRent, rentInflation, renterIns, renterUtils, ...deps]);
 
@@ -419,7 +422,7 @@ export default function App() {
             <Slider label="Property Utilities / Mo" value={utilities} onChange={setUtilities} min={150} max={1200} step={25} color="#fff" tooltip="Monthly water, gas, trash, and shared-area utility costs for the property. May be split with your tenant if they pay utilities." />
             <Slider label="HOA / Mo (Property 1)" value={hoa} onChange={setHoa} min={0} max={1200} step={25} color="#fff" tooltip="Monthly homeowners association fee, if applicable. Covers shared amenities and common-area maintenance. Set to $0 if no HOA." />
             <Slider label="Maint. & Vacancy" value={maintVacancyPct} onChange={setMaintVacancyPct} min={0} max={20} step={1} prefix="" suffix="%" color="#fff" tooltip="Percentage of rental income set aside monthly for repairs, maintenance, and vacant months between tenants. A common landlord rule of thumb is 8–12%." />
-            <Slider label="Emergency Fund % of Price" value={emergencyPct} onChange={setEmergencyPct} min={0} max={5} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Cash reserve held outside your portfolio for major unexpected repairs (roof, HVAC, etc.). Funded from starting capital at purchase and not invested." />
+            <Slider label="Emergency Coverage (Months)" value={emergencyMonths} onChange={setEmergencyMonths} min={0} max={6} step={1} prefix="" suffix=" mo" color="#fff" tooltip="Cash reserve held outside your portfolio for unexpected costs. Calculated as total monthly expenses multiplied by this number of months." />
             <Slider label="Cost to Sell" value={sellingCostPct} onChange={setSellingCostPct} min={0} max={10} step={0.5} prefix="" suffix="%" color="#fff" tooltip="Agent commissions and closing costs when you eventually sell the property. Deducted from final sale proceeds when calculating terminal wealth." />
           </div>
 
