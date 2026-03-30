@@ -13,6 +13,8 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { calcBuy, calcNeverBuy, compare, pmt } = require('./engine.cjs');
 const defaults = require('./defaults.json');
 
@@ -57,6 +59,35 @@ function near(actual, expected, tol = 1, msg = '') {
     `${msg}expected ${expected} ± ${tol}, got ${actual} (diff ${diff.toFixed(2)})`
   );
 }
+
+function normalizeFormula(text) {
+  return text
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\befMonths\b/g, 'emergencyMonths')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([(){}[\],;:+\-*/<>!=?])\s*/g, '$1')
+    .trim();
+}
+
+function assertMatchingFormula(appSource, engineSource, appFormula, engineFormula, label) {
+  assert.ok(
+    normalizeFormula(appSource).includes(normalizeFormula(appFormula)),
+    `${label}: App.jsx missing expected formula`
+  );
+  assert.ok(
+    normalizeFormula(engineSource).includes(normalizeFormula(engineFormula)),
+    `${label}: scripts/engine.cjs missing expected formula`
+  );
+  assert.strictEqual(
+    normalizeFormula(appFormula),
+    normalizeFormula(engineFormula),
+    `${label}: formula drift between App.jsx and scripts/engine.cjs`
+  );
+}
+
+const appSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'App.jsx'), 'utf8');
+const engineSource = fs.readFileSync(path.join(__dirname, 'engine.cjs'), 'utf8');
 
 // ── SECTION 1: DEFAULT-PARAM BASELINE ────────────────────────────────────────
 // These values are captured from the current engine (rate=5.875%) and are
@@ -484,6 +515,92 @@ test('Phase 2 emergency fund is based on Phase 2 carrying costs, not living spen
   const highInflLowLiving = calcBuy(mkBuyParams({ ...base, inflationRate: 6, weeklyCost: 50 }));
   assert.strictEqual(lowInflHighLiving.p2EmergencyFund, highInflLowLiving.p2EmergencyFund,
     `p2EmergencyFund should ignore living/inflation inputs: a=${lowInflHighLiving.p2EmergencyFund}, b=${highInflLowLiving.p2EmergencyFund}`);
+});
+
+// ── SECTION 11: STATIC UI/CLI FORMULA PARITY ────────────────────────────────
+
+console.log('\n─── 11. Static UI/CLI formula parity ───');
+
+test('Phase 1 emergency-fund equations match between App.jsx and engine.cjs', () => {
+  assertMatchingFormula(
+    appSource,
+    engineSource,
+    `
+      const vacancyCarryMonthly = totalPITI + initialPMI + hoa + utilities;
+      const emergencyFund = Math.round(Math.max(0, vacancyCarryMonthly * emergencyMonths));
+      const leftoverCapital = startingCapital - cashToClose - emergencyFund;
+    `,
+    `
+      const vacancyCarryMonthly = totalPITI + initialPMI + hoa + utilities;
+      const emergencyFund = Math.round(Math.max(0, vacancyCarryMonthly * efMonths));
+      const leftoverCapital = startingCapital - cashToClose - emergencyFund;
+    `,
+    'Phase 1 emergency fund'
+  );
+});
+
+test('Phase 2 emergency-fund equations match between App.jsx and engine.cjs', () => {
+  assertMatchingFormula(
+    appSource,
+    engineSource,
+    `
+      const p2InitialPMI = phase2DownPct < 20 ? (phase2PmiRate / 100) * p2Loan / 12 : 0;
+      const p2VacancyCarryMonthly = p2MonthlyPI + p2BaseTax + p2BaseIns + phase2Hoa + p2InitialPMI + phase2Utils;
+      p2EmergencyFund = Math.round(Math.max(0, p2VacancyCarryMonthly * emergencyMonths));
+      const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
+    `,
+    `
+      const p2InitialPMI = phase2DownPct < 20 ? (phase2PmiRate / 100) * p2Loan / 12 : 0;
+      const p2VacancyCarryMonthly = p2MonthlyPI + p2BaseTax + p2BaseIns + phase2Hoa + p2InitialPMI + phase2Utils;
+      p2EmergencyFund = Math.round(Math.max(0, p2VacancyCarryMonthly * efMonths));
+      const p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund;
+    `,
+    'Phase 2 emergency fund'
+  );
+});
+
+test('Option A portfolio compounding equation matches between App.jsx and engine.cjs', () => {
+  assertMatchingFormula(
+    appSource,
+    engineSource,
+    `
+      portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2);
+    `,
+    `
+      portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2);
+    `,
+    'Option A compounding'
+  );
+});
+
+test('Option B portfolio compounding equation matches between App.jsx and engine.cjs', () => {
+  assertMatchingFormula(
+    appSource,
+    engineSource,
+    `
+      portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
+    `,
+    `
+      portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2);
+    `,
+    'Option B compounding'
+  );
+});
+
+test('Final wealth aggregation equations match between App.jsx and engine.cjs', () => {
+  assertMatchingFormula(
+    appSource,
+    engineSource,
+    `
+      const totalWealth = portfolioValue + netEquityHold + p2FinalNetEquityHold;
+      const totalWealthLiq = portfolioValue + netEquityLiq + p2FinalNetEquityLiq;
+    `,
+    `
+      const totalWealth = portfolioValue + netEquityHold + p2FinalNetEquityHold;
+      const totalWealthLiq = portfolioValue + netEquityLiq + p2FinalNetEquityLiq;
+    `,
+    'Final wealth aggregation'
+  );
 });
 
 // ── SUMMARY ───────────────────────────────────────────────────────────────────

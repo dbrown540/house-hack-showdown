@@ -27,7 +27,7 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 | `utilities` | Property Utilities / Mo | Monthly utilities for property 1 |
 | `hoa` | HOA / Mo (Property 1) | Monthly HOA for property 1 |
 | `maintVacancyPct` | Maint. & Vacancy | Rent haircut % for maintenance/vacancy |
-| `emergencyPct` | Emergency Fund % of Price | Emergency fund set-aside as % of price |
+| `emergencyMonths` | Emergency Coverage (Months) | Number of full-vacancy carrying-cost months held as reserve |
 | `sellingCostPct` | Cost to Sell | Selling cost % (used for liquidation equity only) |
 
 ### Market and timing
@@ -102,11 +102,12 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - `monthlyIns = round(price * insPct / 100 / 12)`
 - `totalPITI = monthlyPI + monthlyTax + monthlyIns`
 - `buyClosingCosts = round(price * buyClosingCostPct / 100)`
-- `emergencyFund = round(price * emergencyPct / 100)`
 - `cashToClose = down + repairs + buyClosingCosts`
+- `initialPMI = (downPct < 20) ? (pmiRate / 100) * loan / 12 : 0`
+- `vacancyCarryMonthly = totalPITI + initialPMI + hoa + utilities`
+- `emergencyFund = round(max(0, vacancyCarryMonthly * emergencyMonths))`
 - `leftoverCapital = startingCapital - cashToClose - emergencyFund`
 - `effectiveRentYear1 = rent * (1 - maintVacancyPct / 100)`
-- `initialPMI = (downPct < 20) ? (pmiRate / 100) * loan / 12 : 0`
 - `netHousing = totalPITI + initialPMI + hoa - effectiveRentYear1 + utilities`
 - `totalExpenses = netHousing + livingMonthly`
 - `surplus = monthlyIncome - totalExpenses`
@@ -153,12 +154,14 @@ This file documents the calculator variables and equations used in `src/App.jsx`
   - Transition year (`y = hackYears + 1`) setup:
     - `p2Down = round(phase2Price * phase2DownPct / 100)`
     - `p2ClosingCosts = round(phase2Price * buyClosingCostPct / 100)`
-    - `p2EmergencyFund = round(phase2Price * emergencyPct / 100)`
     - `p2Loan = phase2Price - p2Down`
     - `p2MonthlyPI = pmt(phase2MortRate / 100, 30, p2Loan)`
     - `p2BaseTax = round(phase2Price * phase2TaxPct / 100 / 12)`
     - `p2BaseIns = round(phase2Price * phase2InsPct / 100 / 12)`
     - `p2Balance = p2Loan`
+    - `p2InitialPMI = (phase2DownPct < 20) ? (phase2PmiRate / 100) * p2Loan / 12 : 0`
+    - `p2VacancyCarryMonthly = p2MonthlyPI + p2BaseTax + p2BaseIns + phase2Hoa + p2InitialPMI + phase2Utils`
+    - `p2EmergencyFund = round(max(0, p2VacancyCarryMonthly * emergencyMonths))`
     - `p2TotalCash = p2Down + p2ClosingCosts + p2EmergencyFund`
     - `p2Underfunded = portfolioValue < p2TotalCash`
     - `portfolioValue -= p2TotalCash`
@@ -287,7 +290,7 @@ These assumptions are intentional model choices, not bugs. Each entry describes 
 - **Real-world alternative:** Lenders typically require PMI until the loan-to-value ratio reaches 80% of the *original appraised value*, unless a formal reappraisal is ordered.
 
 ### 2. Emergency fund never compounds
-- **Implementation:** `emergencyFund = round(price * emergencyPct / 100)` is deducted from `startingCapital` and excluded from `portfolioValue` permanently.
+- **Implementation:** `emergencyFund = round(max(0, vacancyCarryMonthly * emergencyMonths))` is deducted from `startingCapital` and excluded from `portfolioValue` permanently. `vacancyCarryMonthly` is the property's full vacancy carry cost: PITI + PMI + HOA + utilities.
 - **Why:** Conservative assumption — treats the emergency fund as illiquid and unavailable for investment.
 - **Effect:** Slightly disadvantages Option A vs. a model where the emergency fund earns a return.
 - **Real-world alternative:** Emergency funds held in HYSA or money-market accounts do earn returns (typically 4–5% as of 2024).
@@ -318,6 +321,6 @@ These assumptions are intentional model choices, not bugs. Each entry describes 
 2. **CAGR removed**: The prior CAGR metric was invalid with ongoing contributions (it conflated savings rate with asset return). Removed entirely.
 3. **Phase-2 utilities fixed**: Personal utilities after move-out now use `phase2Utils` (separate input) instead of reusing property-1 `utilities`. Inflated from move-out year.
 4. **Phase-2 renter's insurance added**: When `phase2Mode === "rent"`, `phase2RenterIns` is included in post-move-out expenses, matching Option B's treatment.
-5. **Phase-2 buy reserves added**: `p2EmergencyFund = round(phase2Price * emergencyPct / 100)` deducted from portfolio at purchase, consistent with property-1.
+5. **Phase-2 buy reserves added**: `p2EmergencyFund = round(max(0, p2VacancyCarryMonthly * emergencyMonths))` deducted from portfolio at purchase, using full Phase 2 carrying costs rather than a price percentage.
 6. **Hold equity as primary metric**: `totalWealth` now uses hold equity (`homeValue - balance`, no selling costs). Liquidation equity (`homeValue - balance - sellingCosts`) shown as secondary output. Charts and winner determination use hold equity.
 7. **Underfunded warnings improved**: Both property-1 and phase-2 underfunded states are detected and surfaced with prominent warnings.
