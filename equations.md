@@ -44,10 +44,12 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 |----------|----------|-------------|
 | `pA` | Home Price | Purchase price |
 | `rA` | Rental Income / Mo | Monthly rent collected during hack phase |
-| `fullRentA` | Full Rent / Mo (after move-out) | Monthly rent after owner moves out |
+| `fullRentA` | Main House Rent / Mo | Monthly rent after owner moves out (main house portion) |
+| `phase2BasementRentA` | Phase 2 Basement Rent / Mo | Additional basement rent from Property 1 after move-out, only when `phase2Mode === "buy"`. Stacks on top of `fullRentA`. |
 | `repA` | Upfront Repairs | One-time repair cost at purchase |
 | `appA` | Appreciation | Annual appreciation rate (%) |
 | `rgA` | Rent Growth | Annual rent growth rate (%) |
+| `taxBenefitPctA` | Tax Benefit (Depreciation) | Annual tax savings as % of purchase price, added to Option A cash flow. 0% = no tax effect (default). |
 
 ### Phase 2 personal housing
 | Variable | UI Label | Description |
@@ -112,7 +114,9 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - `totalExpenses = netHousing + livingMonthly`
 - `surplus = monthlyIncome - totalExpenses`
 - `housingPctGross = netHousing / monthlyIncome * 100`
+- `annualTaxBenefit = price * (taxBenefitPctA / 100)` — fixed annual cash flow added to portfolio compounding (see Annual wealth update). Applied to all years including the hack phase as a simplification.
 - `portfolioValue` starts at `max(leftoverCapital, 0)`
+- `totalRentCollected` starts at `0`
 - Year-0 equity:
   - `yr0HoldEq = down`
   - `yr0LiqEq = down - price * sellingCostPct / 100`
@@ -126,10 +130,12 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - Inflation factor:
   - `inflFactor = (1 + inflationRate / 100)^(y - 1)`
 - Rent:
-  - `baseRent = inHackPhase ? rent : fullRent`
+  - `activePhase2BasementRent = (phase2Mode === "buy") ? phase2BasementRent : 0`
+  - `baseRent = inHackPhase ? rent : fullRent + activePhase2BasementRent`
   - `rentGrowthYears = inHackPhase ? (y - 1) : (y - hackYears - 1)`
   - `curRent = baseRent * (1 + rentGrowth / 100)^(max(0, rentGrowthYears))`
   - `curEffRent = curRent * (1 - maintVacancyPct / 100)`
+  - `totalRentCollected += curEffRent * 12`
 - Expense inflation:
   - `curUtils = utilities * inflFactor`
   - `curHoa = hoa * inflFactor`
@@ -179,7 +185,8 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 - `curNet = curPITI + monthlyPMI + curHoa - curEffRent + ownerUtils + curPersonalHousing + curPersonalUtils + curPersonalRenterIns`
 - `curSurplus = curTakeHome - (curNet + curLiving)`
 - Portfolio compounding (mid-year approximation — existing balance gets full-year return, new contributions get half-year return):
-  - `portfolioValue = portfolioValue * (1 + r) + curSurplus * 12 * (1 + r / 2)`
+  - `portfolioValue = portfolioValue * (1 + r) + (curSurplus * 12 + annualTaxBenefit) * (1 + r / 2)`
+  - Note: `annualTaxBenefit` is added after `curSurplus` is computed so it does not affect the surplus display row.
 - Property 1 equity (hold = primary, liquidation = secondary):
   - `curHoldEq = curHomeValue - balance`
   - `curLiqEq = curHomeValue - balance - curHomeValue * sellingCostPct / 100`
@@ -242,9 +249,18 @@ This file documents the calculator variables and equations used in `src/App.jsx`
 | `netEquity + p2NetEquity` | Combined Hold Equity | A only (if phase2Mode=buy) |
 | `totalRentCollected` | Total Rent Collected | A only |
 | `totalRentPaid` | Total Rent Paid | B only |
+| `annualTaxBenefit` | Tax Savings (Depreciation) | A only (if taxBenefitPctA > 0) |
 | `portfolioValue` | Investment Portfolio | A and B |
 | `totalWealth` | HOLD NET WORTH | A and B (primary comparison) |
 | `totalWealthLiq` | LIQUIDATION NET WORTH | A and B (secondary) |
+
+### ROI metrics (UI-only, computed inline from final values)
+| Metric | Formula |
+|--------|---------|
+| Total Gain | `totalWealth - startingCapital` |
+| Total ROI % | `(totalWealth - startingCapital) / startingCapital * 100` |
+| Annualized ROI (CAGR) | `((totalWealth / startingCapital)^(1/years) - 1) * 100` |
+| Wealth Multiple | `totalWealth / startingCapital` |
 
 ## 5) Option B equations (`calcNeverBuy`)
 - `portfolioValue` starts at `startingCapital`
@@ -279,7 +295,7 @@ This file documents the calculator variables and equations used in `src/App.jsx`
   - Solve `calcNeverBuyWealth(return) ~= a.totalWealth` over `[0, 50]`, 50 iterations.
   - Uses same mid-year compounding: `pv = pv * (1 + cr) + curSurplus * 12 * (1 + cr / 2)`
 
-## 8) Model Assumptions and Known Simplifications
+## 7) Model Assumptions and Known Simplifications
 
 These assumptions are intentional model choices, not bugs. Each entry describes the implementation, the rationale, and the real-world alternative for context.
 
@@ -307,7 +323,13 @@ These assumptions are intentional model choices, not bugs. Each entry describes 
 - **Effect:** Phase 1 vacancy risk may be understated (owner is present, fewer vacancy gaps) or overstated depending on property type.
 - **Real-world alternative:** Separate maintenance and vacancy rates for each phase.
 
-### 5. Winner comparison uses hold equity (no selling costs)
+### 5. Depreciation tax benefit applied to all years without proration
+- **Implementation:** `annualTaxBenefit = price * (taxBenefitPctA / 100)` is added to portfolio compounding every year, including the hack phase when the owner occupies part of the property.
+- **Why:** Prorating by owner-occupancy fraction adds complexity for a small effect (~$3K overstatement per hack year at 1.0% on $300K, compounding to ~$3–4K over 10 years, within the model's existing approximation envelope).
+- **Effect:** Slightly overstates the tax benefit during the hack phase when only part of the property qualifies for depreciation.
+- **Real-world alternative:** Depreciation is only deductible on the rental portion. A prorated model would apply `(rental_sqft / total_sqft) * annualTaxBenefit` during the hack phase and full benefit after move-out.
+
+### 6. Winner comparison uses hold equity (no selling costs)
 - **Implementation:** `totalWealth = portfolioValue + homeValue - balance`. Liquidation equity (`homeValue - balance - sellingCosts`) is computed and displayed as a secondary metric but is not used for the winner determination.
 - **Why:** Assumes the property is held at the evaluation horizon, not sold. Selling costs are transaction costs, not wealth destruction.
 - **Effect:** Option A's winning margin is slightly higher than it would be if liquidation equity were the primary metric. The liquidation net worth row makes the after-costs position visible.
@@ -315,12 +337,15 @@ These assumptions are intentional model choices, not bugs. Each entry describes 
 
 ---
 
-## 7) v5 changelog (from v4)
+## 8) v5 changelog (from v4)
 
 1. **Compounding timing**: Changed from `(portfolio + surplus * 12) * (1 + r)` to mid-year approximation `portfolio * (1 + r) + surplus * 12 * (1 + r / 2)`. Existing balance gets full-year return; new contributions get half-year return on average.
-2. **CAGR removed**: The prior CAGR metric was invalid with ongoing contributions (it conflated savings rate with asset return). Removed entirely.
+2. **CAGR removed then re-added as ROI**: The prior CAGR metric was invalid with ongoing contributions (it conflated savings rate with asset return). Removed, then re-added as "Annualized ROI" computed as `((totalWealth / startingCapital)^(1/years) - 1) * 100` — a simple CAGR on starting capital, not a time-weighted return.
 3. **Phase-2 utilities fixed**: Personal utilities after move-out now use `phase2Utils` (separate input) instead of reusing property-1 `utilities`. Inflated from move-out year.
 4. **Phase-2 renter's insurance added**: When `phase2Mode === "rent"`, `phase2RenterIns` is included in post-move-out expenses, matching Option B's treatment.
 5. **Phase-2 buy reserves added**: `p2EmergencyFund = round(max(0, p2VacancyCarryMonthly * emergencyMonths))` deducted from portfolio at purchase, using full Phase 2 carrying costs rather than a price percentage.
 6. **Hold equity as primary metric**: `totalWealth` now uses hold equity (`homeValue - balance`, no selling costs). Liquidation equity (`homeValue - balance - sellingCosts`) shown as secondary output. Charts and winner determination use hold equity.
 7. **Underfunded warnings improved**: Both property-1 and phase-2 underfunded states are detected and surfaced with prominent warnings.
+8. **Depreciation tax benefit added**: `taxBenefitPctA` slider adds `price * (taxBenefitPctA / 100)` annually to Option A's portfolio compounding. Applied to all years as a simplification (no proration for hack phase).
+9. **Phase 2 basement rent added**: `phase2BasementRentA` stacks on top of `fullRentA` in Phase 2 buy mode, reflecting additional basement rental income from Property 1 after move-out.
+10. **ROI section added**: Total Gain, Total ROI %, Annualized ROI (CAGR), and Wealth Multiple computed inline in the UI from final `totalWealth` and `startingCapital`.
